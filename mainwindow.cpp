@@ -12,7 +12,7 @@
 #include <QDateTime>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), trayIcon(nullptr), trayMenu(nullptr), screenshotWidget(nullptr)
+    : QMainWindow(parent), ui(new Ui::MainWindow), trayIcon(nullptr), trayMenu(nullptr)
 {
     ui->setupUi(this);
     setWindowTitle("ScreenSniper - 截图工具");
@@ -26,10 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
-    if (screenshotWidget)
-    {
-        delete screenshotWidget;
-    }
+    // screenshotWidget会通过deleteLater()自动删除
 }
 
 void MainWindow::setupUI()
@@ -111,48 +108,43 @@ void MainWindow::setupConnections()
 
 void MainWindow::onCaptureScreen()
 {
-    // 隐藏主窗口
+    // 隐藏主窗口和托盘图标提示
     hide();
 
-    // 创建截图窗口
-    if (!screenshotWidget)
-    {
-        screenshotWidget = new ScreenshotWidget();
-        
-        connect(screenshotWidget, &ScreenshotWidget::screenshotTaken, this, [this]()
-                {
-            show();
-            trayIcon->showMessage("截图成功", "全屏截图已保存", QSystemTrayIcon::Information, 2000); });
+    // 每次都重新创建截图窗口
+    ScreenshotWidget *widget = new ScreenshotWidget();
 
-        connect(screenshotWidget, &ScreenshotWidget::screenshotCancelled, this, [this]()
-                { show(); });
-    }
+    connect(widget, &ScreenshotWidget::screenshotTaken, this, [this]()
+            {
+        show();
+        trayIcon->showMessage("截图成功", "全屏截图已保存", QSystemTrayIcon::Information, 2000); });
 
-    // 延迟一下让窗口完全隐藏后再截图
-    QTimer::singleShot(200, [this]()
-                       { screenshotWidget->startCaptureFullScreen(); });
+    connect(widget, &ScreenshotWidget::screenshotCancelled, this, [this]()
+            { show(); });
+
+    // 延迟让窗口完全隐藏后再截图
+    QTimer::singleShot(300, widget, [widget]()
+                       { widget->startCaptureFullScreen(); });
 }
 
 void MainWindow::onCaptureArea()
 {
-    // 隐藏主窗口
+    // 隐藏主窗口和托盘图标提示
     hide();
 
-    // 创建截图窗口
-    if (!screenshotWidget)
-    {
-        screenshotWidget = new ScreenshotWidget();
-    }
+    // 每次都重新创建截图窗口
+    ScreenshotWidget *widget = new ScreenshotWidget();
 
-    connect(screenshotWidget, &ScreenshotWidget::screenshotTaken, this, [this]()
+    connect(widget, &ScreenshotWidget::screenshotTaken, this, [this]()
             {
         show();
-        trayIcon->showMessage("截图成功", "区域截图已保存到剪贴板", QSystemTrayIcon::Information, 2000); });
+        trayIcon->showMessage("截图成功", "区域截图已保存到剪赴板", QSystemTrayIcon::Information, 2000); });
 
-    connect(screenshotWidget, &ScreenshotWidget::screenshotCancelled, this, [this]()
+    connect(widget, &ScreenshotWidget::screenshotCancelled, this, [this]()
             { show(); });
 
-    screenshotWidget->startCapture();
+    // 延迟让窗口完全隐藏后再截图
+    QTimer::singleShot(300, widget, &ScreenshotWidget::startCapture);
 }
 
 void MainWindow::onCaptureWindow()

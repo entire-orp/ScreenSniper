@@ -103,7 +103,7 @@ void ScreenshotWidget::startCapture()
     // 设置窗口大小为屏幕大小
     setGeometry(screen->geometry());
     showFullScreen();
-    
+
     // 确保窗口获得焦点以接收键盘事件
     setFocus();
     activateWindow();
@@ -118,9 +118,10 @@ void ScreenshotWidget::startCaptureFullScreen()
 {
     // 先启动常规截图
     startCapture();
-    
+
     // 然后立即设置为全屏模式
-    QTimer::singleShot(100, this, [this]() {
+    QTimer::singleShot(100, this, [this]()
+                       {
         selectedRect = rect();
         selected = true;
         selecting = false;
@@ -136,8 +137,7 @@ void ScreenshotWidget::startCaptureFullScreen()
         qDebug() << "Toolbar visible:" << toolbar->isVisible();
         qDebug() << "Toolbar pos:" << toolbar->pos();
         
-        update();
-    });
+        update(); });
 }
 
 void ScreenshotWidget::paintEvent(QPaintEvent *event)
@@ -324,7 +324,7 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent *event)
 void ScreenshotWidget::keyPressEvent(QKeyEvent *event)
 {
     qDebug() << "Key pressed:" << event->key() << "selecting:" << selecting << "selected:" << selected;
-    
+
     if (event->key() == Qt::Key_Escape)
     {
         cancelCapture();
@@ -341,24 +341,24 @@ void ScreenshotWidget::keyPressEvent(QKeyEvent *event)
             selectedRect = rect();
             selected = true;
             selecting = false;
-            
+
             qDebug() << "Full screen capture:" << selectedRect;
             qDebug() << "Window size:" << size();
-            
+
             // 确保工具栏大小正确
             toolbar->adjustSize();
             qDebug() << "Toolbar size after adjust:" << toolbar->size();
             qDebug() << "Toolbar sizeHint:" << toolbar->sizeHint();
-            
+
             updateToolbarPosition();
             qDebug() << "Toolbar position:" << toolbar->pos();
-            
+
             toolbar->raise(); // 确保工具栏在最上层
             toolbar->show();
-            
+
             qDebug() << "Toolbar visible:" << toolbar->isVisible();
             qDebug() << "Toolbar geometry:" << toolbar->geometry();
-            
+
             update();
         }
     }
@@ -375,7 +375,7 @@ void ScreenshotWidget::updateToolbarPosition()
     int toolbarHeight = toolbar->sizeHint().height();
 
     int x, y;
-    
+
     // 如果是全屏截图，将工具栏放在屏幕底部中央
     if (selectedRect == rect())
     {
@@ -443,6 +443,7 @@ void ScreenshotWidget::saveScreenshot()
         {
             emit screenshotTaken();
             close();
+            deleteLater(); // 延迟删除对象
         }
     }
 }
@@ -473,10 +474,12 @@ void ScreenshotWidget::copyToClipboard()
 
     emit screenshotTaken();
     close();
+    deleteLater(); // 延迟删除对象
 }
 
 void ScreenshotWidget::cancelCapture()
 {
     emit screenshotCancelled();
     close();
+    deleteLater(); // 延迟删除对象
 }

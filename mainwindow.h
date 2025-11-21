@@ -38,7 +38,6 @@ private:
     Ui::MainWindow *ui;
     QSystemTrayIcon *trayIcon;
     QMenu *trayMenu;
-    ScreenshotWidget *screenshotWidget;
 };
 
 #endif // MAINWINDOW_H
