@@ -4,6 +4,7 @@
 #include <QKeyEvent>
 #include <QScreen>
 #include <QGuiApplication>
+#include <QApplication>
 #include <QClipboard>
 #include <QFileDialog>
 #include <QStandardPaths>
@@ -442,9 +443,15 @@ void ScreenshotWidget::saveScreenshot()
         if (croppedPixmap.save(fileName))
         {
             emit screenshotTaken();
-            close();
-            deleteLater(); // 延迟删除对象
+            hide();               // 立即隐藏窗口
+            QApplication::quit(); // 直接退出应用程序
         }
+    }
+    else
+    {
+        // 用户取消保存，也关闭窗口
+        hide();
+        QApplication::quit();
     }
 }
 
@@ -473,13 +480,13 @@ void ScreenshotWidget::copyToClipboard()
     clipboard->setPixmap(croppedPixmap);
 
     emit screenshotTaken();
-    close();
-    deleteLater(); // 延迟删除对象
+    hide();               // 立即隐藏窗口
+    QApplication::quit(); // 直接退出应用程序
 }
 
 void ScreenshotWidget::cancelCapture()
 {
     emit screenshotCancelled();
-    close();
-    deleteLater(); // 延迟删除对象
+    hide();               // 立即隐藏窗口
+    QApplication::quit(); // 直接退出应用程序
 }
