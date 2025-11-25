@@ -9,6 +9,8 @@
 #include <QVector>
 #include <QPoint>
 #include <QColor>
+#include<QTextEdit>
+#include<QLineEdit>
 
 // 绘制形状数据结构
 struct DrawnArrow
@@ -25,6 +27,26 @@ struct DrawnRectangle
     QColor color;
     int width;
 };
+
+//绘制文本数据结构
+struct DrawnText
+{
+    QString text;
+    QRect rect;
+    QPoint position;
+    QColor color;
+    int fontSize;
+    QFont font;
+};
+
+//画笔数据结构
+struct DrawnPenStroke
+{
+    QVector<QPoint> point;
+    QColor color;
+    int width;
+};
+
 
 class ScreenshotWidget : public QWidget
 {
@@ -48,6 +70,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
+private slots:
+    void onTextInputFinished();
+
 private:
     void setupToolbar();
     void updateToolbarPosition();
@@ -55,6 +80,9 @@ private:
     void copyToClipboard();
     void cancelCapture();
     void drawArrow(QPainter &painter, const QPoint &start, const QPoint &end, const QColor &color, int width);
+    void setupTextInput();
+    void drawText(QPainter &painter, const QPoint &position, const QString &text, const QColor &color, const QFont &font);
+
 
     QPixmap screenPixmap; // 屏幕截图
     QPoint startPoint;    // 选择起始点
@@ -86,6 +114,16 @@ private:
     QPoint currentMousePos;
     bool showMagnifier;
 
+    //文本输入相关
+    QLineEdit *textInput;
+    bool isTextInputActive;
+    QPoint textInputPosition;
+
+    //文字移动相关
+    bool isTextMoving;
+    DrawnText* movingText;
+    QPoint dragStartOffset;
+
     // 绘制相关
     enum DrawMode
     {
@@ -100,11 +138,17 @@ private:
     // 存储绘制的形状
     QVector<DrawnArrow> arrows;
     QVector<DrawnRectangle> rectangles;
+    QVector<DrawnText> texts;
+    QVector<DrawnPenStroke> penStrokes;
+
 
     // 当前绘制的临时数据
     bool isDrawing;
     QPoint drawStartPoint;
     QPoint drawEndPoint;
+    QVector<QPoint> currentPenStroke;
+
+
 };
 
 #endif // SCREENSHOTWIDGET_H
