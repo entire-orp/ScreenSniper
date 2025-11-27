@@ -1,6 +1,8 @@
 #ifndef SCREENSHOTWIDGET_H
 #define SCREENSHOTWIDGET_H
 
+#include "pinwidget.h"
+
 #include <QWidget>
 #include <QPixmap>
 #include <QRect>
@@ -61,6 +63,7 @@ private:
     void saveScreenshot();
     void copyToClipboard();
     void cancelCapture();
+    void pinToDesktop();
     void drawArrow(QPainter &painter, const QPointF &start, const QPointF &end, const QColor &color, int width, double scale = 1.0);
     void captureWindow(QPoint mousePos);
     // 枚举系统所有有效顶层窗口
@@ -85,6 +88,7 @@ private:
     QWidget *toolbar;
     QPushButton *btnSave;
     QPushButton *btnCopy;
+    QPushButton *btnPin; //Pin到桌面按钮
     QPushButton *btnCancel;
     QPushButton *btnRect;  // 矩形工具
     QPushButton *btnArrow; // 箭头工具

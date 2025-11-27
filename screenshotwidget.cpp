@@ -1,4 +1,5 @@
 #include "screenshotwidget.h"
+#include "pinwidget.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
@@ -68,6 +69,7 @@ void ScreenshotWidget::setupToolbar()
     // 操作按钮
     btnSave = new QPushButton("保存", toolbar);
     btnCopy = new QPushButton("复制", toolbar);
+    btnPin = new QPushButton("Pin", toolbar);
     btnCancel = new QPushButton("取消", toolbar);
 
     layout->addWidget(btnRect);
@@ -77,11 +79,13 @@ void ScreenshotWidget::setupToolbar()
     layout->addSpacing(10);
     layout->addWidget(btnSave);
     layout->addWidget(btnCopy);
+    layout->addWidget(btnPin);
     layout->addWidget(btnCancel);
 
     // 连接信号
     connect(btnSave, &QPushButton::clicked, this, &ScreenshotWidget::saveScreenshot);
     connect(btnCopy, &QPushButton::clicked, this, &ScreenshotWidget::copyToClipboard);
+    connect(btnPin, &QPushButton::clicked, this, &ScreenshotWidget::pinToDesktop);
     connect(btnCancel, &QPushButton::clicked, this, &ScreenshotWidget::cancelCapture);
 
     connect(btnRect, &QPushButton::clicked, this, [this]()
@@ -868,5 +872,32 @@ QRect ScreenshotWidget::getAccurateWindowRect(HWND hwnd) {
     return QRect(rect.left / devicePixelRatio, rect.top / devicePixelRatio,
                  (rect.right - rect.left) / devicePixelRatio,
                  (rect.bottom - rect.top) / devicePixelRatio);
+}
+
+// Pin 到桌面
+void ScreenshotWidget::pinToDesktop()
+{
+    // 1. 检查是否有选区
+    if (selectedRect.isNull() || !selected) {
+        return;
+    }
+
+    // 2. 处理当前的绘图效果
+    QPixmap finalPixmap = this->grab(selectedRect);
+
+
+    // 3. 创建 Pin 窗口
+    PinWidget *pin = new PinWidget(finalPixmap);
+
+    // 4. 让贴图出现在选区的原位置
+    QPoint globalPos = this->mapToGlobal(selectedRect.topLeft());
+    pin->move(globalPos);
+
+    // 5. 显示贴图
+    pin->show();
+
+    // 6. 关闭截图主窗口
+    close();
+    emit screenshotTaken();
 }
 
