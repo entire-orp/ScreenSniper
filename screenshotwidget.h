@@ -69,16 +69,28 @@ public:
 signals:
     void screenshotTaken();
     void screenshotCancelled();
+    void penColorChanged();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
     void onTextInputFinished();
+    void onColorPickerClicked();
+    void onPenButtonClicked();
+    void increasePenWidth();
+    void decreasePenWidth();
+    void updatePenWidthLabel();
+    void onTextColorClicked();
+    void increaseFontSize();
+    void decreaseFontSize();
+    void onFontFamilyClicked();
+    void onFontSizeInputChanged();
 
 private:
 
@@ -120,7 +132,20 @@ private:
     //添加文本相关函数
     void setupTextInput();
     void drawText(QPainter& painter, const QPoint& position, const QString& text, const QColor& color, const QFont& font);
+    void setTextToolbar();
+    void updateFontToolbar();
+    void updateTextInputStyle();
+    void updateTextInputSize();
+    void handleTextModeClick(const QPoint& clickPos);
+    void updateFontToolbarPosition();
+    void editExistingText(int textIndex);
+    void handleNoneMode(const QPoint& clickPos);
 
+
+
+    //画笔相关函数
+    void setupPenToolbar();
+    void updatePenToolbarPosition();
 
     QPixmap screenPixmap; // 屏幕截图
     QPoint startPoint;    // 选择起始点
@@ -167,10 +192,16 @@ private:
     QColor currentPenColor;    //当前画笔颜色
     int currentPenWidth;       //当前画笔粗细
 
+    //画笔轨迹相关
+    QVector<QPoint> currentPenStroke;
+    QVector<DrawnPenStroke> penStrokes;
+
+
     //画笔工具栏
     QWidget* penToolbar;
     QPushButton* btnPenWidthUp;
-    QPushButton* btnPenQisthDown;
+    QPushButton* btnPenWidthDown;
+    QLabel* penWidthLabel;
 
     // 高斯模糊相关
     QWidget* blurToolbar;
@@ -203,6 +234,21 @@ private:
     bool isTextMoving;
     DrawnText* movingText;
     QPoint dragStartOffset;
+    QPoint textClickStartPos;   // 文字点击起始位置
+    int textClickIndex;         // 文字点击索引
+    bool potentialTextDrag;     // 是否可能是文字拖拽
+
+    //字体工具栏相关
+    QWidget* fontToolbar;
+    QPushButton* btnFontColor;
+    QPushButton* btnFontSizeUp;
+    QPushButton* btnFontSizeDown;
+    QLineEdit* fontSizeInput;
+    QPushButton* btnFontFamily;
+    QFont currentTextFont;
+    QColor currentTextColor;
+    int currentFontSize;
+    int editingTextIndex;           // 当前正在编辑的文本索引
 
 
     // 绘制相关
@@ -212,14 +258,13 @@ private:
     QVector<DrawnRectangle> rectangles;
     QVector<DrawnEllipse> ellipses;
     QVector<DrawnText> texts;
-    QVector<DrawnPenStroke> penStrokes;
 
 
     // 当前绘制的临时数据
     bool isDrawing;
     QPoint drawStartPoint;
     QPoint drawEndPoint;
-    QVector<QPoint> currentPenStroke;
+
 
 };
 

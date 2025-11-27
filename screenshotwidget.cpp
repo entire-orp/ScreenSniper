@@ -18,6 +18,7 @@
 #include<QtMath>
 #include<QLineEdit>
 #include<QFontDialog>
+#include<QColorDialog>
 
 
 ScreenshotWidget::ScreenshotWidget(QWidget* parent)
@@ -32,7 +33,13 @@ ScreenshotWidget::ScreenshotWidget(QWidget* parent)
     textInput(nullptr),
     isTextInputActive(false),
     isTextMoving(false),
-    movingText(nullptr)
+    movingText(nullptr),
+    currentPenColor(Qt::red),
+    currentPenWidth(3),
+    penToolbar(nullptr),
+    currentTextFont("Arial",18),
+    currentTextColor(Qt::red),
+    currentFontSize(18)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
@@ -41,7 +48,11 @@ ScreenshotWidget::ScreenshotWidget(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus); // 确保窗口能接收键盘事件
 
     setupToolbar();
+    setTextToolbar();
+    setupPenToolbar();
     setupTextInput();
+    currentPenStroke.clear();
+    penStrokes.clear();
     //setupMosaicToolbar();
     // 创建尺寸标签
     sizeLabel = new QLabel(this);
@@ -132,9 +143,66 @@ void ScreenshotWidget::setupToolbar()
     connect(btnArrow, &QPushButton::clicked, this, [this]()
         { currentDrawMode = Arrow; toolbar->show(); EffectToolbar->hide(); });
     connect(btnText, &QPushButton::clicked, this, [this]()
-        { currentDrawMode = Text; toolbar->show(); EffectToolbar->hide(); });
+        {
+            currentDrawMode = Text;
+            toolbar->show();
+            EffectToolbar->hide();
+            penToolbar->hide();  // 隐藏其他工具栏
+
+            // 切换字体工具栏的显示状态（像画笔功能一样）
+            if (fontToolbar && fontToolbar->isVisible()) {
+                fontToolbar->hide();
+            } else {
+                // 确保字体工具栏已初始化
+                if (!fontToolbar) {
+                    setTextToolbar();
+                }
+
+                // 将字体工具栏放在主工具栏下方
+                if (fontToolbar) {
+                    int x = toolbar->x();
+                    int y = toolbar->y() + toolbar->height() + 5;
+
+                    // 确保不超出屏幕边界
+                    if (y + fontToolbar->height() > height()) {
+                        y = toolbar->y() - fontToolbar->height() - 5;
+                    }
+
+                    fontToolbar->move(x, y);
+                    fontToolbar->show();
+                    fontToolbar->raise();
+                }
+            }
+        });
     connect(btnPen, &QPushButton::clicked, this, [this]()
-        { currentDrawMode = Pen; toolbar->show(); EffectToolbar->hide(); });
+                {
+                    currentDrawMode = Pen;
+                    toolbar->show();
+                    EffectToolbar->hide();
+
+                    // 切换画笔工具栏的显示状态（像马赛克功能一样）
+                    if (penToolbar->isVisible()) {
+                        penToolbar->hide();
+                    } else {
+                        // 获取画笔按钮在屏幕中的位置
+                        QPoint penBtnPos = btnPen->mapToGlobal(QPoint(0, 0));
+                        // 转换为当前widget的坐标
+                        QPoint localPos = this->mapFromGlobal(penBtnPos);
+
+                        // 将画笔工具栏放在画笔按钮正下方
+                        int x = localPos.x();
+                        int y = localPos.y() + btnPen->height() + 5;
+
+                        penToolbar->move(x, y);
+                        penToolbar->show();
+                        penToolbar->raise();
+
+                        // 如果有已绘制的画笔轨迹，立即更新预览
+                        if (!penStrokes.isEmpty()) {
+                            update();
+                        }
+                    }
+                });
     connect(btnMosaic, &QPushButton::clicked, this, [this]()
         {
             currentDrawMode = Mosaic;
@@ -709,11 +777,47 @@ void ScreenshotWidget::paintEvent(QPaintEvent* event)
         painter.drawEllipse(ellipse.rect);
     }
 
-    //绘制所有文本
-    for (const DrawnText& text : texts) {
-        //绘制文字
-        drawText(painter, text.rect.topLeft() + QPoint(5, text.fontSize + 5),
-            text.text, text.color, text.font);
+    //绘制所有文本（限制在截图框范围内）
+    if (selected) { // 只在选中区域后绘制文字
+        for (const DrawnText& text : texts) {
+            // 检查文字是否与截图框有重叠
+            if (text.rect.intersects(selectedRect)) {
+                // 绘制文字，使用原始位置，不再添加额外偏移
+                drawText(painter, text.position, text.text, text.color, text.font);
+            }
+        }
+    } else {
+        // 未选中区域时，绘制所有文字
+        for (const DrawnText& text : texts) {
+            // 使用原始位置，不再添加额外偏移
+            drawText(painter, text.position, text.text, text.color, text.font);
+        }
+    }
+    //绘制已经完成的画笔轨迹
+    if (selected) { // 只在选中区域后绘制
+        for(const DrawnPenStroke &stroke : penStrokes){
+            // 移除调试输出，提高性能
+
+            QPen pen(stroke.color, stroke.width);
+            pen.setCapStyle(Qt::RoundCap);
+            pen.setJoinStyle(Qt::RoundJoin);
+            painter.setPen(pen);
+            //painter.setRenderHint(QPainter::Antialiasing);
+
+            //绘制连续线条，确保只在截图框范围内显示
+            QPainterPath path;
+            if (!stroke.points.isEmpty()) {
+                path.moveTo(stroke.points.first());
+                for(int i = 1; i < stroke.points.size(); i++){
+                    path.lineTo(stroke.points[i]);
+                }
+                // 创建截图框的裁剪区域
+                painter.save();
+                painter.setClipRect(selectedRect);
+                painter.drawPath(path);
+                painter.restore();
+            }
+        }
     }
 
     // 绘制当前正在绘制的形状
@@ -736,84 +840,96 @@ void ScreenshotWidget::paintEvent(QPaintEvent* event)
 
         }
     }
+
+    //绘制当前正在绘制的画笔轨迹
+    if(isDrawing && currentDrawMode == Pen && selected && currentPenStroke.size() > 1){
+        QPen pen(currentPenColor,currentPenWidth);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        painter.setPen(pen);
+        //painter.setRenderHint(QPainter::Antialiasing);
+
+        //绘制当前画笔轨迹，确保只在截图框范围内显示
+        QPainterPath path;
+        path.moveTo(currentPenStroke.first());
+        for(int i = 1; i < currentPenStroke.size(); i++){
+            path.lineTo(currentPenStroke[i]);
+        }
+        // 创建截图框的裁剪区域
+        painter.save();
+        painter.setClipRect(selectedRect);
+        painter.drawPath(path);
+        painter.restore();
+    }
 }
 
 void ScreenshotWidget::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
+        isDrawing = false;
+        drawingEffect = false;
+        isTextMoving = false;
         QPoint clickPos = event->pos();
-        //检查是否点击了已存在的文字
+
+        // 处理文本输入框相关逻辑
+        if (isTextInputActive && textInput && textInput->isVisible()) {
+
+            if (!textInput->geometry().contains(clickPos)) {
+                onTextInputFinished();
+                currentDrawMode = Text;
+                isTextInputActive = false;
+            }
+            return;
+        }
+
+        // 检查是否点击了已存在的文字
         if (selected && !isTextInputActive) {
             for (int i = texts.size() - 1; i >= 0; i--) {
-                if (texts[i].rect.contains(event->pos())) {
-                    //开始拖拽文字
+                if (texts[i].rect.contains(clickPos)) {
+                    // 开始拖拽文字
                     isTextMoving = true;
                     movingText = &texts[i];
-                    dragStartOffset = event->pos() - texts[i].rect.topLeft();
+                    dragStartOffset = clickPos - texts[i].rect.topLeft();
                     setCursor(Qt::ClosedHandCursor);
 
-                    currentDrawMode = None;
+                    // 暂停当前绘制模式
                     isDrawing = false;
+                    drawingEffect = false;
+
                     update();
                     return;
                 }
             }
         }
 
-        if (isTextInputActive && textInput->isVisible()) {
-            // 点击文本输入框外部：完成当前文本输入，但保持文本模式
-            if (!textInput->geometry().contains(clickPos)) {
-                onTextInputFinished(); // 完成当前文本输入
-                // 但保持文本模式，允许继续添加文字
-                currentDrawMode = Text;
-                isTextInputActive = false; // 输入框已隐藏，但模式保持
-            }
-            return;
-        }
         // 如果已经选中区域且处于文字绘制模式
-        else if (currentDrawMode == Text && !isTextInputActive) {
-            //文本模式：显示输入框
-            textInputPosition = event->pos();
-            textInput->move(event->pos());
-            textInput->resize(200, 30);
-            textInput->show();
-            textInput->setFocus();
-            isTextInputActive = true;
+        if (currentDrawMode == Text && !isTextInputActive) {
+            // 文本模式：显示输入框
+            handleTextModeClick(clickPos);
             return;
         }
-        else if (selected && currentDrawMode == None) {
-            bool textClicked = false;
-            for (int i = texts.size() - 1; i >= 0; --i) {
-                if (texts[i].rect.contains(clickPos)) {
-                    // 点击了已存在的文字，进入编辑模式
-                    currentDrawMode = Text;
-                    textInputPosition = texts[i].position;
-                    textInput->move(texts[i].position);
-                    textInput->resize(texts[i].rect.size());
-                    textInput->setText(texts[i].text);
-                    textInput->show();
-                    textInput->setFocus();
-                    textInput->selectAll();
-                    isTextInputActive = true;
 
-                    // 移除原来的文字（编辑后重新添加）
-                    texts.removeAt(i);
-                    textClicked = true;
-                    break;
-                }
-            }
-            if (textClicked) return;
+        // 处理文字编辑模式
+        if (selected && currentDrawMode == None) {
+            // 调用handleNoneMode函数处理文本点击编辑逻辑
+            handleNoneMode(clickPos);
+            return;
         }
         // 如果已经选中区域且处于图形绘制模式
-        else if (selected && (currentDrawMode == Rectangle || currentDrawMode == Arrow || currentDrawMode == Ellipse))
+        else if (selected && (currentDrawMode == Rectangle || currentDrawMode == Arrow ||
+                              currentDrawMode == Ellipse))
         {
             isDrawing = true;
             drawStartPoint = event->pos();
             drawEndPoint = event->pos();
+
             //隐藏文本输入框
-            textInput->hide();
-            isTextInputActive = false;
+            if (textInput) {
+                textInput->hide();
+                isTextInputActive = false;
+            }
+            update();
         }
         //如果已经选中区域且处于马赛克或者高斯模糊模式
         else if ((currentDrawMode == Mosaic || currentDrawMode == Blur) && selected) {
@@ -821,7 +937,17 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent* event)
             EffectStartPoint = event->pos();
             EffectEndPoint = event->pos();
             drawingEffect = true;
-            EffectToolbar->hide(); // 开始绘制时隐藏强度工具栏
+            if (EffectToolbar) {
+                EffectToolbar->hide(); // 开始绘制时隐藏强度工具栏
+            }
+        }
+        //如果已经选中区域且处于画笔状态
+        else if(currentDrawMode == Pen && selected){
+
+            isDrawing = true;
+
+            currentPenStroke.clear();
+            currentPenStroke.append(event->pos());
         }
         else {
             // 否则开始选择选择新区域
@@ -832,11 +958,17 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent* event)
             selecting = true;
             selected = false;
             // showMagnifier已经在startCapture时设置为true，这里不需要重复设置
-            toolbar->hide();
+            if (toolbar) {
+                toolbar->hide();
+            }
             showMagnifier = true;
-            toolbar->hide();
+            if (toolbar) {
+                toolbar->hide();
+            }
             EffectAreas.clear(); // 清除之前的模糊区域
-            EffectToolbar->hide(); // 隐藏马赛克工具栏
+            if (EffectToolbar) {
+                EffectToolbar->hide(); // 隐藏马赛克工具栏
+            }
             EffectAreas.clear();
             EffectStrengths.clear();
             effectTypes.clear();  // 清除效果类型
@@ -855,6 +987,17 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent* event)
         showMagnifier = true;
         update();
     }
+    else if (isDrawing && currentDrawMode == Pen && selected){
+        // 限制画笔点在截图框范围内
+        QPoint limitedPos = event->pos();
+        if (!selectedRect.contains(limitedPos)) {
+            // 如果点不在截图框内，将其限制在截图框的边界上
+            limitedPos.setX(qMax(selectedRect.left(), qMin(selectedRect.right(), limitedPos.x())));
+            limitedPos.setY(qMax(selectedRect.top(), qMin(selectedRect.bottom(), limitedPos.y())));
+        }
+        currentPenStroke.append(limitedPos);
+        update();
+    }
     else if (isDrawing)
     {
         drawEndPoint = event->pos();
@@ -871,25 +1014,33 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent* event)
         update();
     }
     else if (isTextMoving && movingText) {
-        //拖拽移动文字：实时更新位置
+        // 拖拽移动文字：实时更新位置
         QPoint newPos = event->pos() - dragStartOffset;
 
-        //确保文字不会移出屏幕边界
-        newPos.setX(qMax(0, qMin(newPos.x(), width() - movingText->rect.width())));
-        newPos.setY(qMax(0, qMin(newPos.y(), height() - movingText->rect.height())));
+        // 确保文字不会移出截图框边界（与画笔限制保持一致）
+        if (selected) {
+            newPos.setX(qMax(selectedRect.left(), qMin(selectedRect.right() - movingText->rect.width(), newPos.x())));
+            newPos.setY(qMax(selectedRect.top(), qMin(selectedRect.bottom() - movingText->rect.height(), newPos.y())));
+        } else {
+            // 未选中区域时，限制在屏幕边界
+            newPos.setX(qMax(0, qMin(width() - movingText->rect.width(), newPos.x())));
+            newPos.setY(qMax(0, qMin(height() - movingText->rect.height(), newPos.y())));
+        }
 
         movingText->rect.moveTopLeft(newPos);
         movingText->position = newPos;
         update();
     }
     else {
-        //检查鼠标是否悬停在文字上
+        // 检查鼠标是否悬停在文字上
         bool overText = false;
-        for (const DrawnText& text : texts) {
-            if (text.rect.contains(event->pos())) {
-                setCursor(Qt::PointingHandCursor);
-                overText = true;
-                break;
+        if (selected && !isTextInputActive) { // 只在选中区域且非输入状态下检查文字悬停
+            for (const DrawnText& text : texts) {
+                if (text.rect.contains(event->pos())) {
+                    setCursor(Qt::PointingHandCursor);
+                    overText = true;
+                    break;
+                }
             }
         }
         if (!overText) {
@@ -912,53 +1063,73 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent* event)
                 EffectStrengths.append(currentEffectStrength); // 保存当前强度
                 effectTypes.append(currentDrawMode);  // 保存效果类型
                 // 显示强度调节工具栏
-                updateEffectToolbarPosition();
-                EffectToolbar->show();
-                EffectToolbar->raise();
+                if (EffectToolbar) {
+                    updateEffectToolbarPosition();
+                    EffectToolbar->show();
+                    EffectToolbar->raise();
+                }
                 // 立即更新显示，确保新区域可见
                 update();
             }
         }
         else if (isDrawing)
         {
-            isDrawing = false;
-            drawEndPoint = event->pos();
+            if (currentDrawMode == Pen)
+            {
+                // 先处理画笔，因为它不需要drawEndPoint
+                isDrawing = false;
+                //保存画笔笔迹
+                if(currentPenStroke.size() > 1){
+                    DrawnPenStroke stroke;
+                    stroke.points = currentPenStroke;
+                    stroke.color = currentPenColor;
+                    stroke.width = currentPenWidth;
+                    penStrokes.append(stroke);
+                }
+                currentPenStroke.clear();
+                update();
+            }
+            else
+            {
+                isDrawing = false;
+                drawEndPoint = event->pos();
 
-            // 保存绘制的形状
-            if (currentDrawMode == Arrow)
-            {
-                DrawnArrow arrow;
-                arrow.start = drawStartPoint;
-                arrow.end = drawEndPoint;
-                arrow.color = QColor(255, 0, 0);
-                arrow.width = 3;
-                arrows.append(arrow);
-            }
-            else if (currentDrawMode == Rectangle)
-            {
-                DrawnRectangle rect;
-                rect.rect = QRect(drawStartPoint, drawEndPoint).normalized();
-                rect.color = QColor(255, 0, 0);
-                rect.width = 3;
-                rectangles.append(rect);
-            }
-            else if (currentDrawMode == Ellipse)
-            {
-                DrawnEllipse ellipse;
-                ellipse.rect = QRect(drawStartPoint, drawEndPoint).normalized();
-                ellipse.color = QColor(255, 0, 0);
-                ellipse.width = 3;
-                ellipses.append(ellipse);
+                // 保存绘制的形状
+                if (currentDrawMode == Arrow)
+                {
+                    DrawnArrow arrow;
+                    arrow.start = drawStartPoint;
+                    arrow.end = drawEndPoint;
+                    arrow.color = QColor(255, 0, 0);
+                    arrow.width = 3;
+                    arrows.append(arrow);
+                }
+                else if (currentDrawMode == Rectangle)
+                {
+                    DrawnRectangle rect;
+                    rect.rect = QRect(drawStartPoint, drawEndPoint).normalized();
+                    rect.color = QColor(255, 0, 0);
+                    rect.width = 3;
+                    rectangles.append(rect);
+                }
+                else if (currentDrawMode == Ellipse)
+                {
+                    DrawnEllipse ellipse;
+                    ellipse.rect = QRect(drawStartPoint, drawEndPoint).normalized();
+                    ellipse.color = QColor(255, 0, 0);
+                    ellipse.width = 3;
+                    ellipses.append(ellipse);
+                }
             }
 
-            update();
         }
         else if (isTextMoving && movingText) {
-            //松开鼠标左键，停止拖拽移动
+            // 松开鼠标左键，停止拖拽移动
             isTextMoving = false;
             movingText = nullptr;
             setCursor(Qt::CrossCursor);
             update();
+            return;
         }
 
         //else if(selecting)
@@ -970,7 +1141,9 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent* event)
             selectedRect = QRect(startPoint, endPoint).normalized();
             EffectAreas.clear();
             EffectStrengths.clear();
-            EffectToolbar->hide();
+            if (EffectToolbar) {
+                EffectToolbar->hide();
+            }
 
             if (!selectedRect.isEmpty()) {
                 updateToolbarPosition();
@@ -1042,7 +1215,7 @@ void ScreenshotWidget::keyPressEvent(QKeyEvent* event)
 }
 void ScreenshotWidget::updateEffectToolbarPosition()
 {
-    if (EffectAreas.isEmpty()) return;
+    if (EffectAreas.isEmpty() || !EffectToolbar) return;
 
     // 获取最后一个马赛克区域的位置
     QRect lastEffectArea = EffectAreas.last();
@@ -1231,6 +1404,23 @@ void ScreenshotWidget::saveScreenshot()
             text.text, text.color, text.font);
     }
 
+    //绘制画笔轨迹
+    for(const DrawnPenStroke &stroke : penStrokes){
+        if(stroke.points.size() < 2) continue;
+
+        QPen pen(stroke.color,stroke.width* devicePixelRatio);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        painter.setPen(pen);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        for(int i = 1; i < stroke.points.size(); i++){
+            QPointF start = (stroke.points[i-1] - selectedRect.topLeft()) * devicePixelRatio;
+            QPointF end = (stroke.points[i] - selectedRect.topLeft()) * devicePixelRatio;
+            painter.drawLine(start,end);
+        }
+    }
+
 
     painter.end();
 
@@ -1371,6 +1561,25 @@ void ScreenshotWidget::copyToClipboard()
         drawText(painter, adjustedPosition + QPoint(5, text.fontSize + 5),
             text.text, text.color, text.font);
     }
+
+    //绘制画笔轨迹
+    for(const DrawnPenStroke &stroke : penStrokes){
+        if(stroke.points.size() < 2) continue;
+
+        QPen pen(stroke.color,stroke.width* devicePixelRatio);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        painter.setPen(pen);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        for(int i = 1; i < stroke.points.size(); i++){
+            QPointF start = (stroke.points[i-1] - selectedRect.topLeft()) * devicePixelRatio;
+            QPointF end = (stroke.points[i] - selectedRect.topLeft()) * devicePixelRatio;
+            painter.drawLine(start,end);
+        }
+    }
+
+
     painter.end();
 
     // 应用模糊效果（如果有模糊区域）
@@ -1433,6 +1642,7 @@ void ScreenshotWidget::drawArrow(QPainter& painter, const QPointF& start, const 
     arrowHead << end << arrowP1 << arrowP2;
     painter.drawPolygon(arrowHead);
 }
+
 void ScreenshotWidget::setupTextInput() {
     //添加文本输入框设置
     textInput = new QLineEdit(this);
@@ -1455,37 +1665,559 @@ void ScreenshotWidget::onTextInputFinished() {
             textInput->clear();
         }
         isTextInputActive = false;
-        currentDrawMode = None;
+        // 保持当前模式，不强制设为None，允许继续添加文字
+        if (fontToolbar) {
+            fontToolbar->hide();
+        }
         return;
     }
-    //保存文本
+
+    // 保存文本
     DrawnText drawnText;
     drawnText.position = textInputPosition;
     drawnText.text = textInput->text();
-    drawnText.color = QColor(255, 0, 0);
-    drawnText.fontSize = 14;
-    drawnText.font = QFont("Arial", drawnText.fontSize);
+    drawnText.color = currentTextColor;
+    drawnText.fontSize = currentFontSize;
+    drawnText.font = currentTextFont;
 
-    //计算文字矩形大小
+    // 计算文字矩形大小
     QFontMetrics metrics(drawnText.font);
     QRect textRect = metrics.boundingRect(drawnText.text);
     textRect.moveTopLeft(textInputPosition);
-    textRect.adjust(-2, -2, 2, 2);
+    textRect.adjust(-2, -2, 2, 2); // 添加一些内边距
+
+    // 如果在选中区域内，确保文字不超出截图框边界
+    if (selected) {
+        // 计算限制在截图框内的位置
+        QPoint limitedPos = textInputPosition;
+        int maxX = selectedRect.right() - textRect.width();
+        int maxY = selectedRect.bottom() - textRect.height();
+
+        limitedPos.setX(qMax(selectedRect.left(), qMin(maxX, limitedPos.x())));
+        limitedPos.setY(qMax(selectedRect.top(), qMin(maxY, limitedPos.y())));
+
+        // 更新文字位置和矩形
+        textRect.moveTopLeft(limitedPos);
+        drawnText.position = limitedPos;
+    }
+
     drawnText.rect = textRect;
 
+    // 添加文字到列表
     texts.append(drawnText);
 
+    // 隐藏输入框并清除内容
     textInput->hide();
     textInput->clear();
     isTextInputActive = false;
-    currentDrawMode = None;
+    fontToolbar->hide();
+
+    // 保持文本模式，允许继续添加文字
+    currentDrawMode = Text;
+
+    // 使用update()而不是repaint()，让Qt优化重绘过程
     update();
 }
 
 //文本绘制函数
 void ScreenshotWidget::drawText(QPainter& painter, const QPoint& position, const QString& text, const QColor& color, const QFont& font) {
+    painter.save();
     painter.setPen(color);
     painter.setFont(font);
+
+    // 如果在选中区域内，创建裁剪区域，确保文字只在截图框内显示
+    if (selected) {
+        painter.setClipRect(selectedRect);
+    }
+
     painter.drawText(position, text);
+    painter.restore();
 }
+
+//字体工具栏设置
+void ScreenshotWidget::setTextToolbar(){    
+    // 如果字体工具栏已经存在，直接返回
+    if(fontToolbar){        
+        return;
+    }
+    
+    fontToolbar = new QWidget(this);
+    fontToolbar->setStyleSheet(
+                "QWidget { background-color: rgba(40, 40, 40, 200); border-radius: 5px; }"
+                        "QPushButton { background-color: rgba(60, 60, 60, 255); color: white; "
+                        "border: none; padding: 8px 12px; border-radius: 3px; font-size: 12px; }"
+                        "QPushButton:hover { background-color: rgba(80, 80, 80, 255); }"
+                        "QPushButton:pressed { background-color: rgba(50, 50, 50, 255); }"
+                        "QLabel { background-color: transparent; color: white; padding: 5px; font-size: 12px; }"
+                        "QPushButton#colorBtn { min-width: 60px; font-weight: bold; }");
+    QHBoxLayout* fontLayout = new QHBoxLayout(fontToolbar);
+    fontLayout->setSpacing(5);
+    fontLayout->setContentsMargins(10,5,10,5);
+
+    //字体颜色
+    btnFontColor = new QPushButton("颜色",fontToolbar);
+    btnFontColor->setObjectName("colorBtn");
+
+    //字体大小调节
+    btnFontSizeDown = new QPushButton("-",fontToolbar);
+    fontSizeInput = new QLineEdit(fontToolbar);
+    fontSizeInput->setFixedWidth(50);
+    fontSizeInput->setAlignment(Qt::AlignCenter);
+    fontSizeInput->setStyleSheet("QLineEdit { background-color: rgba(80, 80, 80, 255); color: white; border: 1px solid rgba(100, 100, 100, 255); border-radius: 3px; padding: 5px; font-size: 12px; }");
+    btnFontSizeUp = new QPushButton("+",fontToolbar);
+
+    //字体选择按钮
+    btnFontFamily = new QPushButton("字体",fontToolbar);
+
+    fontLayout->addWidget(new QLabel("文字设置：",fontToolbar));
+    fontLayout->addWidget(btnFontColor);
+    fontLayout->addWidget(btnFontSizeDown);
+    fontLayout->addWidget(fontSizeInput);
+    fontLayout->addWidget(btnFontSizeUp);
+    fontLayout->addWidget(btnFontFamily);
+
+    fontToolbar->adjustSize();
+    fontToolbar->hide();
+
+    //初始化字体设置
+    currentTextFont = QFont("Arial",18);
+    currentTextColor = Qt::red;
+    currentFontSize = 18;
+    updateFontToolbar();
+
+    //连接信号
+    connect(btnFontColor, &QPushButton::clicked, this, &ScreenshotWidget::onTextColorClicked);
+    connect(btnFontSizeUp, &QPushButton::clicked, this, &ScreenshotWidget::increaseFontSize);
+    connect(btnFontSizeDown, &QPushButton::clicked, this, &ScreenshotWidget::decreaseFontSize);
+    connect(btnFontFamily, &QPushButton::clicked, this, &ScreenshotWidget::onFontFamilyClicked);
+    connect(fontSizeInput, &QLineEdit::editingFinished, this, &ScreenshotWidget::onFontSizeInputChanged);
+
+
+}
+
+void ScreenshotWidget::onFontSizeInputChanged(){
+    if (fontSizeInput) {
+        bool ok;
+        int newSize = fontSizeInput->text().toInt(&ok);
+        if (ok && newSize > 0 && newSize <= 100) { // 限制字体大小范围
+            currentFontSize = newSize;
+            currentTextFont.setPixelSize(currentFontSize);
+            updateFontToolbar(); // 确保显示的是正确值
+            updateTextInputStyle();
+        } else {
+            // 输入无效，恢复原值
+            fontSizeInput->setText(QString("%1").arg(currentFontSize));
+        }
+    }
+}
+
+void ScreenshotWidget::updateFontToolbar(){
+    if (fontSizeInput) {
+        fontSizeInput->setText(QString("%1").arg(currentFontSize));
+    }
+    // 更新颜色按钮显示
+    if (btnFontColor) {
+        btnFontColor->setStyleSheet(QString(
+                "QPushButton#colorBtn {"
+                "background-color: %1; "
+                "color: %2; "
+                "border: 2px solid white; "
+                "font-weight: bold; "
+                "min-width: 60px; "
+                "}"
+                ).arg(currentTextColor.name())
+                                    .arg(currentTextColor.lightness() < 128 ? "white" : "black"));
+    }
+}
+
+
+//字体颜色选择
+void ScreenshotWidget::onTextColorClicked(){
+    QColor color = QColorDialog::getColor(currentTextColor,this,"选择文字颜色");
+    if(color.isValid()){
+        currentTextColor = color;
+        updateFontToolbar();
+
+        // 如果正在编辑文本，更新输入框的样式
+        if (isTextInputActive && textInput) {
+            QPalette palette = textInput->palette();
+            palette.setColor(QPalette::Text, currentTextColor);
+            textInput->setPalette(palette);
+
+            // 更新当前编辑的文本样式并重新计算大小
+            updateTextInputSize();
+        }
+
+        update();
+    }
+}
+
+//增大字号
+void ScreenshotWidget::increaseFontSize(){
+    if(currentFontSize < 72){
+        currentFontSize++;
+        currentTextFont.setPixelSize(currentFontSize);
+        updateFontToolbar();
+
+        // 如果正在编辑文本，更新输入框的样式
+        if (isTextInputActive && textInput) {
+            QFont font = textInput->font();
+            font.setPixelSize(currentFontSize);
+            textInput->setFont(font);
+
+            // 更新当前编辑的文本样式并重新计算大小
+            updateTextInputSize();
+        }
+
+        update();
+    }
+}
+
+//减小字号
+void ScreenshotWidget::decreaseFontSize(){
+    if(currentFontSize > 8){
+        currentFontSize--;
+        currentTextFont.setPixelSize(currentFontSize);
+        updateFontToolbar();
+
+        // 如果正在编辑文本，更新输入框的样式
+        if (isTextInputActive && textInput) {
+            QFont font = textInput->font();
+            font.setPixelSize(currentFontSize);
+            textInput->setFont(font);
+
+            // 更新当前编辑的文本样式并重新计算大小
+            updateTextInputSize();
+        }
+
+        update();
+    }
+}
+
+//字体选择
+void ScreenshotWidget::onFontFamilyClicked(){
+    bool ok;
+    QFont font = QFontDialog::getFont(&ok, currentTextFont, this, "选择字体");
+    if(ok){
+        currentTextFont = font;
+        currentFontSize = font.pixelSize();
+        updateFontToolbar();
+
+        // 如果正在编辑文本，更新输入框的样式
+        if (isTextInputActive && textInput) {
+            textInput->setFont(currentTextFont);
+
+            // 更新当前编辑的文本样式并重新计算大小
+            updateTextInputSize();
+        }
+
+        update();
+    }
+}
+
+void ScreenshotWidget::handleTextModeClick(const QPoint& clickPos){
+    //显示文本输入框
+    if (textInput) {
+        textInputPosition = clickPos;
+        textInput->move(clickPos);
+        textInput->resize(200, 30);
+        textInput->show();
+        textInput->setFocus();
+        textInput->clear();
+        isTextInputActive = true;
+    }
+    // 不再自动显示字体工具栏，由用户点击文本按钮控制
+}
+
+void ScreenshotWidget::updateTextInputStyle() {
+    if (!isTextInputActive || !textInput) {
+        return;
+    }
+
+    // 更新文本输入框的字体和颜色
+    textInput->setFont(currentTextFont);
+    
+    QPalette palette = textInput->palette();
+    palette.setColor(QPalette::Text, currentTextColor);
+    textInput->setPalette(palette);
+
+    // 更新输入框的大小以适应新的字体大小
+    updateTextInputSize();
+}
+
+void ScreenshotWidget::updateTextInputSize() {
+    if (!isTextInputActive || !textInput) {
+        return;
+    }
+
+    // 获取当前文本和字体
+    QString text = textInput->text();
+    QFont font = currentTextFont;
+
+    // 计算文本的实际大小
+    QFontMetrics metrics(font);
+    QRect textRect = metrics.boundingRect(text.isEmpty() ? "输入文字..." : text);
+
+    // 确保最小宽度和高度
+    int width = qMax(textRect.width() + 10, 100);
+    int height = qMax(textRect.height() + 10, 30);
+
+    // 只有当大小真正改变时才调整，避免频繁的resize操作
+    if (textInput->width() != width || textInput->height() != height) {
+        textInput->resize(width, height);
+
+        // 只在大小改变时更新工具栏位置
+        updateFontToolbarPosition();
+    }
+}
+
+void ScreenshotWidget::updateFontToolbarPosition(){    
+    if(!fontToolbar || !selected){
+        return;
+    }
+    int toolbarWidth = fontToolbar->sizeHint().width();
+    int toolbarHeight = fontToolbar->sizeHint().height();
+
+    // 将字体工具栏放在主工具栏下方
+    int x = toolbar->x();
+    int y = toolbar->y() + toolbar->height() + 5;
+
+    // 如果下方空间不够，就放在上方
+    if(y + toolbarHeight > height()){
+        y = toolbar->y() - toolbarHeight - 5;
+    }
+
+    // 确保不超出屏幕边界
+    if(x + toolbarWidth > width()){
+        x = width() - toolbarWidth - 5;
+    }
+    if(x < 5) x = 5;
+
+    fontToolbar->move(x,y);
+}
+void ScreenshotWidget::handleNoneMode(const QPoint& clickPos){
+    for (int i = texts.size() - 1; i >= 0; i--) {
+        if (texts[i].rect.contains(clickPos)) {
+            // 单击选中文字，准备拖拽（在mousePressEvent中处理）
+            // 这里主要处理非拖拽的单击选择
+            setCursor(Qt::PointingHandCursor);
+            break;
+        }
+    }
+}
+
+void ScreenshotWidget::setupPenToolbar(){
+    //画笔工具栏设置
+    penToolbar = new QWidget(this);
+    penToolbar->setStyleSheet(
+            "QWidget{background-color:rgba(40, 40, 40, 200);border-radius: 5px;}"
+            "QPushButton { background-color: rgba(60, 60, 60, 255); color: white; "
+            "border: none; padding: 8px 15px; border-radius: 3px; font-size: 13px; }"
+            "QPushButton:hover { background-color: rgba(80, 80, 80, 255); }"
+            "QPushButton:pressed { background-color: rgba(50, 50, 50, 255); }"
+            "QLabel { background-color: transparent; color: white; padding: 5px; font-size: 12px; }"
+            "QPushButton#colorBtn { min-width: 60px; font-weight: bold; }");
+
+    QHBoxLayout *penLayout = new QHBoxLayout(penToolbar);
+    penLayout->setSpacing(5);
+    penLayout->setContentsMargins(10, 8, 10, 8);
+
+    //颜色选择按钮
+    QPushButton *btnColorPicker = new QPushButton("颜色",penToolbar);
+    btnColorPicker->setObjectName("colorBtn");
+    btnColorPicker->setStyleSheet(QString(
+            "QPushButton#colorBtn{"
+            "background-color:%1; "
+            "color:%2; "
+            "border: 2px solid white; "
+            "font-weight: bold; "
+            "min-width: 80px; "
+            "padding: 12px 18px; "
+            "margin: 5px 10px; "
+            "}"
+            "QPushButton#colorBtn:hover{ "
+            "background=color: %3; "
+            "}").arg(currentPenColor.name())
+            .arg(currentPenColor.lightness()<128?"white":"black")
+            .arg(currentPenColor.lighter(120).name()));
+
+    //粗细调节按钮
+    btnPenWidthUp = new QPushButton("+",penToolbar);
+    btnPenWidthDown = new QPushButton("-", penToolbar);
+    penWidthLabel = new QLabel(QString("%1px").arg(currentPenWidth),penToolbar);
+
+    //添加预览标签
+    QLabel *previewLabel = new QLabel("预览:",penToolbar);
+
+    //添加预览画布
+    QLabel *previewCanvas = new QLabel(penToolbar);
+    previewCanvas->setFixedSize(30,30);
+    updatePreviewCanvas(previewCanvas);
+
+    penLayout->addWidget(previewLabel);
+    penLayout->addWidget(previewCanvas);
+    penLayout->addSpacing(10);
+    penLayout->addWidget(btnColorPicker);
+    penLayout->addSpacing(5);
+    penLayout->addWidget(new QLabel("粗细：",penToolbar));
+    penLayout->addWidget(btnPenWidthDown);
+    penLayout->addWidget(penWidthLabel);
+    penLayout->addWidget(btnPenWidthUp);
+
+    penToolbar->adjustSize();
+    penToolbar->hide();
+
+    //连接信号
+    connect(btnPenWidthUp,&QPushButton::clicked,this,&ScreenshotWidget::increasePenWidth);
+    connect(btnPenWidthDown,&QPushButton::clicked,this,&ScreenshotWidget::decreasePenWidth);
+    connect(btnColorPicker,&QPushButton::clicked,this,&ScreenshotWidget::onColorPickerClicked);
+
+    //颜色改变时更新预览
+    connect(this,&ScreenshotWidget::penColorChanged,this,[btnColorPicker,previewCanvas,this](){
+       btnColorPicker->setStyleSheet(QString(
+            "QPushButton{ "
+            "background-color: %1; "
+            "color: %2; "
+            "border: 2px solid white; "
+            "font-weight: bold; "
+            "min-width: 80px; "
+            "}"
+            ).arg(currentPenColor.name())
+             .arg(currentPenColor.lightness()<128?"white":"black"));
+       updatePreviewCanvas(previewCanvas);
+    });
+}
+
+void ScreenshotWidget::updatePreviewCanvas(QLabel *canvas){
+    QPixmap pixmap(canvas->size());
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    //绘制预览线条
+    QPen pen(currentPenColor,currentPenWidth);
+    pen.setCapStyle(Qt::RoundCap);
+    painter.setPen(pen);
+
+    //绘制一条示例线
+    int centerY = pixmap.height()/2;
+    painter.drawLine(5,centerY,pixmap.width() - 5,centerY);
+
+    painter.end();
+    canvas->setPixmap(pixmap);
+
+}
+
+void ScreenshotWidget::onPenButtonClicked(){
+    currentDrawMode = DrawMode::Pen;
+    qDebug()<<"画笔模式激活";
+}
+
+void ScreenshotWidget::onColorPickerClicked(){
+    QColor color = QColorDialog::getColor(currentPenColor,this,"选择画笔颜色");
+    if(color.isValid()){
+        currentPenColor = color;
+        emit penColorChanged();
+        update();
+    }
+}
+void ScreenshotWidget::increasePenWidth(){
+    if(currentPenWidth < 20){
+        currentPenWidth++;
+        updatePenWidthLabel();
+        emit penColorChanged();
+        update();
+    }
+}
+void ScreenshotWidget::decreasePenWidth(){
+    if(currentPenWidth > 1){
+        currentPenWidth--;
+        updatePenWidthLabel();
+        emit penColorChanged();
+        update();
+    }
+
+}
+void ScreenshotWidget::updatePenWidthLabel(){
+    if(penWidthLabel){
+        penWidthLabel->setText(QString("%1px").arg(currentPenWidth));
+    }
+}
+
+void ScreenshotWidget::updatePenToolbarPosition()
+{
+    if (!penToolbar || !selected) return;
+
+    int toolbarWidth = penToolbar->sizeHint().width();
+    int toolbarHeight = penToolbar->sizeHint().height();
+
+    // 放在主工具栏下方
+    int x = toolbar->x();
+    int y = toolbar->y() + toolbar->height() + 5;
+
+    // 确保不超出屏幕
+    if (y + toolbarHeight > height()) {
+        y = toolbar->y() - toolbarHeight - 5;
+    }
+
+    penToolbar->move(x, y);
+}
+
+void ScreenshotWidget::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (selected && (currentDrawMode == None || currentDrawMode == Text)) {
+        QPoint clickPos = event->pos();
+        for (int i = texts.size() - 1; i >= 0; i--) {
+            if (texts[i].rect.contains(clickPos)) {
+                //双击编辑现有文字
+                editExistingText(i);
+                break;
+            }
+        }
+    }
+}
+
+void ScreenshotWidget::editExistingText(int textIndex)
+{
+    if (textIndex < 0 || textIndex >= texts.size()) return;
+
+    DrawnText& text = texts[textIndex];
+
+    // 切换到文本模式
+    currentDrawMode = Text;
+
+    // 设置输入框位置和内容
+    textInputPosition = text.position;
+    
+    // 确保textInput存在
+    if (textInput) {
+        textInput->move(text.position);
+        textInput->resize(text.rect.size());
+        textInput->setText(text.text);
+        textInput->show();
+        textInput->setFocus();
+        textInput->selectAll();
+        isTextInputActive = true;
+
+        // 使用原来的字体设置
+        currentTextColor = text.color;
+        currentTextFont = text.font;
+        currentFontSize = text.fontSize;
+        
+        // 确保fontToolbar存在
+        if (fontToolbar) {
+            updateFontToolbar();
+            updateFontToolbarPosition();
+            fontToolbar->show();
+            fontToolbar->raise();
+        }
+
+        // 移除原来的文字（编辑后重新添加）
+        texts.removeAt(textIndex);
+
+        update();
+    }
+}
+
 
