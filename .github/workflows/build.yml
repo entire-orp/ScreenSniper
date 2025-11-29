@@ -58,8 +58,10 @@ jobs:
     - name: Configure Project (local_config.pri)
       run: |
         # Linux usually installs to standard paths, but we need to link libraries
+        # Ubuntu's libopencv-dev puts headers in /usr/include/opencv4
         echo "unix:!macx: {" > local_config.pri
         echo "    DEFINES += USE_TESSERACT" >> local_config.pri
+        echo "    INCLUDEPATH += /usr/include/opencv4" >> local_config.pri
         echo "    LIBS += -ltesseract -lleptonica -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lopencv_videoio" >> local_config.pri
         echo "}" >> local_config.pri
         
