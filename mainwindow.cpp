@@ -258,7 +258,7 @@ QString MainWindow::getText(const QString &key, const QString &defaultText) cons
 // 加载语言设置
 void MainWindow::loadLanguageSettings()
 {
-    QSettings settings("ScreenSniper", "ScreenSniper");
+    QSettings settings;
     currentLanguage = settings.value("language", "zh").toString();
 
     switchLanguage(currentLanguage);
@@ -267,7 +267,7 @@ void MainWindow::loadLanguageSettings()
 // 保存语言设置
 void MainWindow::saveLanguageSettings()
 {
-    QSettings settings("ScreenSniper", "ScreenSniper");
+    QSettings settings;
     settings.setValue("language", currentLanguage);
 }
 
@@ -276,22 +276,23 @@ void MainWindow::switchLanguage(const QString &language)
 {
     currentLanguage = language;
 
-    // 构建语言文件路径
+    // 优先尝试从资源文件加载
     QString langFile = QString(":/locales/%1.json").arg(language);
-
-    // 如果资源文件不存在，尝试从文件系统读取
-    if (!QFile::exists(langFile))
-    {
-        langFile = QString("locales/%1.json").arg(language);
-    }
 
     QFile file(langFile);
     if (!file.open(QIODevice::ReadOnly))
     {
-        qWarning() << "无法打开语言文件:" << langFile;
-        qWarning() << "提示: 如果是首次编译，请先运行 'npm install && npm run install-locales' 安装翻译文件";
-        translations = QJsonObject(); // 清空翻译
-        return;
+        // 如果资源文件打开失败，尝试从文件系统读取
+        langFile = QString("locales/%1.json").arg(language);
+        file.setFileName(langFile);
+
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            qWarning() << "无法打开语言文件:" << langFile;
+            qWarning() << "提示: 如果是首次编译，请先运行 'npm install && npm run install-locales' 安装翻译文件";
+            translations = QJsonObject(); // 清空翻译
+            return;
+        }
     }
 
     QByteArray data = file.readAll();
@@ -306,7 +307,7 @@ void MainWindow::switchLanguage(const QString &language)
     }
 
     translations = doc.object();
-    qDebug() << "成功加载语言文件:" << langFile << "包含" << translations.keys().size() << "个键";
+    qDebug() << "语言已切换到:" << language;
 
     saveLanguageSettings();
 }

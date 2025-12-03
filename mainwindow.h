@@ -23,7 +23,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    QString getText(const QString &key, const QString &defaultText = "") const;
+    Q_INVOKABLE QString getText(const QString &key, const QString &defaultText = "") const;
 
 private slots:
     void onCaptureScreen();

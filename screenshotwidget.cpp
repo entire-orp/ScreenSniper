@@ -129,6 +129,48 @@ QString ScreenshotWidget::getText(const QString &key, const QString &defaultText
     return defaultText;
 }
 
+void ScreenshotWidget::updateTooltips()
+{
+    if (!mainWindow)
+        return;
+
+    // 更新主工具栏按钮的工具提示
+    if (btnShapes)
+        btnShapes->setToolTip(getText("tooltip_shapes", "形状"));
+    if (btnText)
+        btnText->setToolTip(getText("tooltip_text", "文字"));
+    if (btnPen)
+        btnPen->setToolTip(getText("tooltip_pen", "画笔"));
+    if (btnMosaic)
+        btnMosaic->setToolTip(getText("tooltip_mosaic", "马赛克"));
+    if (btnBlur)
+        btnBlur->setToolTip(getText("tooltip_blur", "高斯模糊"));
+#ifndef NO_OPENCV
+    if (btnWatermark)
+        btnWatermark->setToolTip(getText("tooltip_watermark", "隐水印"));
+#endif
+    if (btnOCR)
+        btnOCR->setToolTip(getText("tooltip_ocr", "OCR文字识别"));
+    if (btnSave)
+        btnSave->setToolTip(getText("tooltip_save", "保存"));
+    if (btnCopy)
+        btnCopy->setToolTip(getText("tooltip_copy", "复制"));
+    if (btnPin)
+        btnPin->setToolTip(getText("tooltip_pin", "贴图"));
+    if (btnCancel)
+        btnCancel->setToolTip(getText("tooltip_cancel", "取消"));
+
+    // 更新形状工具栏按钮的工具提示
+    if (btnRect)
+        btnRect->setToolTip(getText("tooltip_rect", "矩形"));
+    if (btnEllipse)
+        btnEllipse->setToolTip(getText("tooltip_ellipse", "椭圆"));
+    if (btnArrow)
+        btnArrow->setToolTip(getText("tooltip_arrow", "箭头"));
+    if (btnShapeColor)
+        btnShapeColor->setToolTip(getText("tooltip_color", "选择颜色"));
+}
+
 void ScreenshotWidget::setupToolbar()
 {
     // 主工具栏设置
@@ -188,7 +230,7 @@ void ScreenshotWidget::setupToolbar()
     btnOCR = new QPushButton(toolbar);
     btnOCR->setIcon(QIcon(":/icons/icons/ocr.svg"));
     btnOCR->setIconSize(QSize(20, 20));
-    btnOCR->setToolTip("OCR");
+    btnOCR->setToolTip(getText("tooltip_ocr", "OCR文字识别"));
     btnOCR->setFixedSize(36, 36);
 
     // 操作按钮
@@ -207,7 +249,7 @@ void ScreenshotWidget::setupToolbar()
     btnPin = new QPushButton(toolbar);
     btnPin->setIcon(QIcon(":/icons/icons/pin.svg"));
     btnPin->setIconSize(QSize(20, 20));
-    btnPin->setToolTip("Pin");
+    btnPin->setToolTip(getText("tooltip_pin", "贴图"));
     btnPin->setFixedSize(36, 36);
 
     btnCancel = new QPushButton(toolbar);
