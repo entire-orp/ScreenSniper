@@ -25,6 +25,9 @@ public:
 
     Q_INVOKABLE QString getText(const QString &key, const QString &defaultText = "") const;
 
+signals:
+    void languageChanged(const QString &newLanguage);
+
 private slots:
     void onCaptureScreen();
     void onCaptureArea();
@@ -47,6 +50,16 @@ private:
     QMenu *trayMenu;
     QString currentLanguage;  // 当前语言设置: "zh", "en", "zhHK"
     QJsonObject translations; // 当前语言的翻译数据
+    
+    // UI 元素引用，用于更新文本
+    QPushButton *btnFullScreen;
+    QPushButton *btnArea;
+    QPushButton *btnSettings;
+    QAction *actionFullScreen;
+    QAction *actionArea;
+    QAction *actionShow;
+    QAction *actionAbout;
+    QAction *actionQuit;
 };
 
 #endif // MAINWINDOW_H

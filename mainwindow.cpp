@@ -22,7 +22,19 @@
 #include <QDialogButtonBox>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), trayIcon(nullptr), trayMenu(nullptr), currentLanguage("zh")
+    : QMainWindow(parent), 
+      ui(new Ui::MainWindow), 
+      trayIcon(nullptr), 
+      trayMenu(nullptr), 
+      currentLanguage("zh"),
+      btnFullScreen(nullptr),
+      btnArea(nullptr),
+      btnSettings(nullptr),
+      actionFullScreen(nullptr),
+      actionArea(nullptr),
+      actionShow(nullptr),
+      actionAbout(nullptr),
+      actionQuit(nullptr)
 {
     ui->setupUi(this);
 
@@ -49,9 +61,9 @@ void MainWindow::setupUI()
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
 
     // 添加按钮（使用多语言文本）
-    QPushButton *btnFullScreen = new QPushButton(getText("btn_fullscreen", "截取全屏 (Ctrl+Shift+F)"), this);
-    QPushButton *btnArea = new QPushButton(getText("btn_area", "截取区域 (Ctrl+Shift+A)"), this);
-    QPushButton *btnSettings = new QPushButton(getText("btn_settings", "设置"), this);
+    btnFullScreen = new QPushButton(getText("btn_fullscreen", "截取全屏 (Ctrl+Shift+F)"), this);
+    btnArea = new QPushButton(getText("btn_area", "截取区域 (Ctrl+Shift+A)"), this);
+    btnSettings = new QPushButton(getText("btn_settings", "设置"), this);
 
     btnFullScreen->setMinimumHeight(40);
     btnArea->setMinimumHeight(40);
@@ -80,11 +92,11 @@ void MainWindow::setupTrayIcon()
     // 创建托盘菜单（使用多语言文本）
     trayMenu = new QMenu(this);
 
-    QAction *actionFullScreen = new QAction(getText("tray_fullscreen", "截取全屏"), this);
-    QAction *actionArea = new QAction(getText("tray_area", "截取区域"), this);
-    QAction *actionShow = new QAction(getText("tray_show", "显示主窗口"), this);
-    QAction *actionAbout = new QAction(getText("tray_about", "关于"), this);
-    QAction *actionQuit = new QAction(getText("tray_quit", "退出"), this);
+    actionFullScreen = new QAction(getText("tray_fullscreen", "截取全屏"), this);
+    actionArea = new QAction(getText("tray_area", "截取区域"), this);
+    actionShow = new QAction(getText("tray_show", "显示主窗口"), this);
+    actionAbout = new QAction(getText("tray_about", "关于"), this);
+    actionQuit = new QAction(getText("tray_quit", "退出"), this);
 
     trayMenu->addAction(actionFullScreen);
     trayMenu->addAction(actionArea);
@@ -206,10 +218,6 @@ void MainWindow::onSettings()
         if (newLanguage != currentLanguage)
         {
             switchLanguage(newLanguage);
-            updateUI();
-            QMessageBox::information(this,
-                                     getText("settings_title", "设置"),
-                                     getText("settings_language_changed", "语言已更改，部分界面将在重启后生效。"));
         }
     }
 }
@@ -310,6 +318,12 @@ void MainWindow::switchLanguage(const QString &language)
     qDebug() << "语言已切换到:" << language;
 
     saveLanguageSettings();
+    
+    // 更新主窗口的 UI 文本
+    updateUI();
+    
+    // 发射语言变化信号，通知所有连接的组件（如 ScreenshotWidget、PinWidget）
+    emit languageChanged(language);
 }
 
 // 更新界面文本
@@ -323,7 +337,24 @@ void MainWindow::updateUI()
     {
         trayIcon->setToolTip(getText("tray_tooltip", "ScreenSniper - 截图工具"));
     }
-
-    // 注意：由于按钮和菜单在 setupUI 和 setupTrayIcon 中创建，
-    // 完整的界面更新需要重启应用程序
+    
+    // 更新主窗口按钮文本
+    if (btnFullScreen)
+        btnFullScreen->setText(getText("btn_fullscreen", "截取全屏 (Ctrl+Shift+F)"));
+    if (btnArea)
+        btnArea->setText(getText("btn_area", "截取区域 (Ctrl+Shift+A)"));
+    if (btnSettings)
+        btnSettings->setText(getText("btn_settings", "设置"));
+    
+    // 更新托盘菜单文本
+    if (actionFullScreen)
+        actionFullScreen->setText(getText("tray_fullscreen", "截取全屏"));
+    if (actionArea)
+        actionArea->setText(getText("tray_area", "截取区域"));
+    if (actionShow)
+        actionShow->setText(getText("tray_show", "显示主窗口"));
+    if (actionAbout)
+        actionAbout->setText(getText("tray_about", "关于"));
+    if (actionQuit)
+        actionQuit->setText(getText("tray_quit", "退出"));
 }

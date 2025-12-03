@@ -45,6 +45,25 @@ QString PinWidget::getText(const QString &key, const QString &defaultText) const
     return defaultText;
 }
 
+void PinWidget::setMainWindow(QWidget *mainWin)
+{
+    mainWindow = mainWin;
+    
+    if (mainWindow)
+    {
+        // 连接语言变化信号
+        connect(mainWindow, SIGNAL(languageChanged(QString)),
+                this, SLOT(onLanguageChanged()));
+    }
+}
+
+void PinWidget::onLanguageChanged()
+{
+    // 语言变化时，PinWidget 的右键菜单是动态创建的，不需要额外处理
+    // 如果将来有需要持久化的UI元素，可以在这里更新
+    update();
+}
+
 void PinWidget::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);

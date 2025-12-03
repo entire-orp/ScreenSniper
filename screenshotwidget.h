@@ -85,16 +85,13 @@ public:
     void startCaptureFullScreen(); // 直接截取全屏并显示工具栏
 
     // 国际化支持
-    void setMainWindow(QWidget *mainWin)
-    {
-        mainWindow = mainWin;
-        updateTooltips(); // 设置 mainWindow 后立即更新工具提示
-    }
+    void setMainWindow(QWidget *mainWin);
     QString getText(const QString &key, const QString &defaultText = "") const;
     void updateTooltips(); // 更新所有工具提示文本
 
 private slots:
     void performOCR();
+    void onLanguageChanged(); // 响应语言变化
 
 signals:
     void screenshotTaken();

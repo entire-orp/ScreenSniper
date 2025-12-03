@@ -14,8 +14,11 @@ public:
     explicit PinWidget(const QPixmap &pixmap, QWidget *parent = nullptr);
 
     // 国际化支持
-    void setMainWindow(QWidget *mainWin) { mainWindow = mainWin; }
+    void setMainWindow(QWidget *mainWin);
     QString getText(const QString &key, const QString &defaultText = "") const;
+
+private slots:
+    void onLanguageChanged(); // 响应语言变化
 
 protected:
     // 核心绘制：把图片画出来
