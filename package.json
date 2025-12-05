@@ -4,6 +4,7 @@
   "description": "ScreenSniper 截图工具",
   "main": "index.js",
   "scripts": {
+    "predev": "npm update @screensniper/locales",
     "install-locales": "node scripts/install-locales.js",
     "update-locales": "npm run install-locales",
     "prebuild": "npm run install-locales"
@@ -16,7 +17,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@screensniper/locales": "^1.2.0"
+    "@screensniper/locales": "latest"
   },
   "devDependencies": {}
 }
