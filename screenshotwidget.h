@@ -13,6 +13,7 @@
 #include <QColor>
 #include <QTextEdit>
 #include <QLineEdit>
+#include "i18nmanager.h"
 
 // 绘制形状数据结构
 struct DrawnArrow
@@ -120,6 +121,9 @@ private slots:
     void onFontSizeInputChanged();
 
 private:
+    // 初始化I18n连接
+    void initializeI18nConnection();
+    
     // 越界判断相关：
     // 水印相关
 #ifndef NO_OPENCV

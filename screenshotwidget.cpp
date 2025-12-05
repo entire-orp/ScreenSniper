@@ -80,6 +80,9 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
     setCursor(Qt::CrossCursor);
     setFocusPolicy(Qt::StrongFocus); // 确保窗口能接收键盘事件
 
+    // 初始化I18n连接
+    initializeI18nConnection();
+
     setupToolbar();
     setTextToolbar();
     setupPenToolbar();
@@ -104,44 +107,16 @@ ScreenshotWidget::~ScreenshotWidget()
 
 QString ScreenshotWidget::getText(const QString &key, const QString &defaultText) const
 {
-    if (mainWindow)
-    {
-        // 使用 MainWindow 的 getText 方法
-        QMetaObject::invokeMethod(mainWindow, "getText",
-                                  Qt::DirectConnection,
-                                  Q_RETURN_ARG(QString, const_cast<QString &>(const_cast<ScreenshotWidget *>(this)->watermarkText)),
-                                  Q_ARG(QString, key),
-                                  Q_ARG(QString, defaultText));
-        // 更简单的方式：直接调用
-        const QMetaObject *metaObj = mainWindow->metaObject();
-        int methodIndex = metaObj->indexOfMethod("getText(QString,QString)");
-        if (methodIndex != -1)
-        {
-            QString result;
-            QMetaMethod method = metaObj->method(methodIndex);
-            method.invoke(mainWindow, Qt::DirectConnection,
-                          Q_RETURN_ARG(QString, result),
-                          Q_ARG(QString, key),
-                          Q_ARG(QString, defaultText));
-            return result;
-        }
-    }
-    return defaultText;
+    // 使用 I18nManager 获取翻译，不再依赖 MainWindow
+    return I18nManager::instance()->getText(key, defaultText);
 }
 
 void ScreenshotWidget::setMainWindow(QWidget *mainWin)
 {
     mainWindow = mainWin;
 
-    if (mainWindow)
-    {
-        // 连接语言变化信号
-        connect(mainWindow, SIGNAL(languageChanged(QString)),
-                this, SLOT(onLanguageChanged()));
-
-        // 初始化时更新工具提示
-        updateTooltips();
-    }
+    // 初始化时更新工具提示
+    updateTooltips();
 }
 
 void ScreenshotWidget::onLanguageChanged()
@@ -150,6 +125,14 @@ void ScreenshotWidget::onLanguageChanged()
     updateTooltips();
     // 请求重绘界面（如果有需要显示的文本）
     update();
+}
+
+// 初始化连接I18nManager信号
+void ScreenshotWidget::initializeI18nConnection()
+{
+    // 直接连接到I18nManager的语言变化信号
+    connect(I18nManager::instance(), &I18nManager::languageChanged,
+            this, &ScreenshotWidget::onLanguageChanged);
 }
 
 void ScreenshotWidget::updateTooltips()

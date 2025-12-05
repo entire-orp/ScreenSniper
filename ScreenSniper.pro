@@ -95,14 +95,16 @@ SOURCES += \
     pinwidget.cpp \
     screenshotwidget.cpp \
     ocrmanager.cpp \
-    watermark_robust.cpp
+    watermark_robust.cpp \
+    i18nmanager.cpp
 
 HEADERS += \
     mainwindow.h \
     pinwidget.h \
     screenshotwidget.h \
     ocrmanager.h \
-    watermark_robust.h
+    watermark_robust.h \
+    i18nmanager.h
 
 FORMS += \
     mainwindow.ui

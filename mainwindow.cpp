@@ -26,7 +26,6 @@ MainWindow::MainWindow(QWidget *parent)
       ui(new Ui::MainWindow),
       trayIcon(nullptr),
       trayMenu(nullptr),
-      currentLanguage("zh"),
       btnFullScreen(nullptr),
       btnArea(nullptr),
       btnSettings(nullptr),
@@ -38,10 +37,18 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    loadLanguageSettings();
+    // 从I18nManager获取当前语言
+    currentLanguage = I18nManager::instance()->currentLanguage();
 
     setWindowTitle(getText("app_title", "ScreenSniper - 截图工具"));
     resize(400, 300);
+
+    // 连接I18nManager的语言变化信号
+    connect(I18nManager::instance(), &I18nManager::languageChanged, this, [this](const QString &newLanguage)
+            {
+        currentLanguage = newLanguage;
+        updateUI();
+        emit languageChanged(newLanguage); });
 
     setupUI();
     setupTrayIcon();
@@ -217,7 +224,8 @@ void MainWindow::onSettings()
         QString newLanguage = langCombo->currentData().toString();
         if (newLanguage != currentLanguage)
         {
-            switchLanguage(newLanguage);
+            // 使用I18nManager切换语言
+            I18nManager::instance()->loadLanguage(newLanguage);
         }
     }
 }
@@ -256,74 +264,7 @@ void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
 // 通过键获取翻译文本
 QString MainWindow::getText(const QString &key, const QString &defaultText) const
 {
-    if (translations.contains(key))
-    {
-        return translations[key].toString();
-    }
-    return defaultText.isEmpty() ? key : defaultText;
-}
-
-// 加载语言设置
-void MainWindow::loadLanguageSettings()
-{
-    QSettings settings;
-    currentLanguage = settings.value("language", "zh").toString();
-
-    switchLanguage(currentLanguage);
-}
-
-// 保存语言设置
-void MainWindow::saveLanguageSettings()
-{
-    QSettings settings;
-    settings.setValue("language", currentLanguage);
-}
-
-// 切换语言
-void MainWindow::switchLanguage(const QString &language)
-{
-    currentLanguage = language;
-
-    // 优先尝试从资源文件加载
-    QString langFile = QString(":/locales/%1.json").arg(language);
-
-    QFile file(langFile);
-    if (!file.open(QIODevice::ReadOnly))
-    {
-        // 如果资源文件打开失败，尝试从文件系统读取
-        langFile = QString("locales/%1.json").arg(language);
-        file.setFileName(langFile);
-
-        if (!file.open(QIODevice::ReadOnly))
-        {
-            qWarning() << "无法打开语言文件:" << langFile;
-            qWarning() << "提示: 如果是首次编译，请先运行 'npm install && npm run install-locales' 安装翻译文件";
-            translations = QJsonObject(); // 清空翻译
-            return;
-        }
-    }
-
-    QByteArray data = file.readAll();
-    file.close();
-
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (doc.isNull() || !doc.isObject())
-    {
-        qWarning() << "语言文件格式错误:" << langFile;
-        translations = QJsonObject();
-        return;
-    }
-
-    translations = doc.object();
-    qDebug() << "语言已切换到:" << language;
-
-    saveLanguageSettings();
-
-    // 更新主窗口的 UI 文本
-    updateUI();
-
-    // 发射语言变化信号，通知所有连接的组件（如 ScreenshotWidget、PinWidget）
-    emit languageChanged(language);
+    return I18nManager::instance()->getText(key, defaultText);
 }
 
 // 更新界面文本
