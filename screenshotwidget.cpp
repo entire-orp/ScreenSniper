@@ -358,7 +358,8 @@ void ScreenshotWidget::setupToolbar()
             {
                 selected = true;
                 currentDrawMode = Text;
-                toolbar->show();
+                if (toolbar)
+                    toolbar->show();
                 
                 if (!fontToolbar) {
                     setTextToolbar();
@@ -369,12 +370,13 @@ void ScreenshotWidget::setupToolbar()
             {
                 selected = true;
                 currentDrawMode = Pen;
-                toolbar->show();
+                if (toolbar)
+                    toolbar->show();
                 
                 toggleSubToolbar(penToolbar);
 
                 // 如果有已绘制的画笔轨迹，立即更新预览
-                if (penToolbar->isVisible() && !penStrokes.isEmpty()) {
+                if (penToolbar && penToolbar->isVisible() && !penStrokes.isEmpty()) {
                     update();
                 } });
 
@@ -382,14 +384,16 @@ void ScreenshotWidget::setupToolbar()
             {
                 selected = true;
                 currentDrawMode = Mosaic;
-                toolbar->show();
+                if (toolbar)
+                    toolbar->show();
                 toggleSubToolbar(nullptr); });
 
     connect(btnBlur, &QPushButton::clicked, this, [this]()
             {
                 selected = true;
                 currentDrawMode = Blur;
-                toolbar->show();
+                if (toolbar)
+                    toolbar->show();
                 toggleSubToolbar(nullptr); });
 #ifndef NO_OPENCV
     connect(btnWatermark, &QPushButton::clicked, this, [this]()
@@ -403,12 +407,16 @@ void ScreenshotWidget::setupToolbar()
 
 
 
-    toolbar->adjustSize();
-    EffectToolbar->adjustSize();
+    if (toolbar)
+        toolbar->adjustSize();
+    if (EffectToolbar)
+        EffectToolbar->adjustSize();
 
     // 默认隐藏所有工具栏
-    toolbar->hide();
-    EffectToolbar->hide();
+    if (toolbar)
+        toolbar->hide();
+    if (EffectToolbar)
+        EffectToolbar->hide();
 }
 
 // 创建统一的圆形颜色按钮
@@ -740,13 +748,15 @@ void ScreenshotWidget::startCaptureFullScreen()
             selected = true;
             selecting = false;
 
-            toolbar->setParent(this);
-            toolbar->adjustSize();
-            updateToolbarPosition();
-            toolbar->setWindowFlags(Qt::Widget);
-            toolbar->raise();
-            toolbar->show();
-            toolbar->activateWindow();
+            if (toolbar) {
+                toolbar->setParent(this);
+                toolbar->adjustSize();
+                updateToolbarPosition();
+                toolbar->setWindowFlags(Qt::Widget);
+                toolbar->raise();
+                toolbar->show();
+                toolbar->activateWindow();
+            }
 
             update(); });
 }
@@ -1632,7 +1642,7 @@ void ScreenshotWidget::breakCapture()
 
 void ScreenshotWidget::updateToolbarPosition()
 {
-    if (selectedRect.isEmpty())
+    if (!toolbar || selectedRect.isEmpty())
     {
         return;
     }
@@ -2555,7 +2565,7 @@ void ScreenshotWidget::updatePenToolbarPosition()
             y = btnPos.y() - toolbarHeight - 5;
         }
     }
-    else
+    else if (toolbar)
     {
         // 默认放在主工具栏下方
         x = toolbar->x();
@@ -2565,6 +2575,12 @@ void ScreenshotWidget::updatePenToolbarPosition()
         {
             y = toolbar->y() - toolbarHeight - 5;
         }
+    }
+    else
+    {
+        // toolbar 为空，使用默认位置
+        x = minX + 10;
+        y = minY + 10;
     }
 
     // 水平方向边界检查
@@ -3205,7 +3221,7 @@ void ScreenshotWidget::updateShapesToolbarPosition()
             y = btnPos.y() - toolbarHeight - 5;
         }
     }
-    else
+    else if (toolbar)
     {
         // 默认放在主工具栏下方
         x = toolbar->x();
@@ -3215,6 +3231,12 @@ void ScreenshotWidget::updateShapesToolbarPosition()
         {
             y = toolbar->y() - toolbarHeight - 5;
         }
+    }
+    else
+    {
+        // toolbar 为空，使用默认位置
+        x = minX + 10;
+        y = minY + 10;
     }
 
     // 水平方向边界检查
