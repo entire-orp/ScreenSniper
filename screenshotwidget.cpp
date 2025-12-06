@@ -1,4 +1,5 @@
 #include "screenshotwidget.h"
+#include <QPointer>
 #include "pinwidget.h"
 #include "ocrresultdialog.h"
 #include <QPainter>
@@ -73,10 +74,58 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
       editingTextIndex(-1),
       currentDrawMode(None),
       isDrawing(false),
-      mainWindow(nullptr)
+      mainWindow(nullptr),
+      m_aiManager(nullptr),
+      fontToolbar(nullptr),
+      EffectToolbar(nullptr),
+      sizeLabel(nullptr),
+      btnShapes(nullptr),
+      btnText(nullptr),
+      btnPen(nullptr),
+      btnMosaic(nullptr),
+      btnBlur(nullptr),
+#ifndef NO_OPENCV
+      btnWatermark(nullptr),
+#endif
+      btnOCR(nullptr),
+      btnAIDescription(nullptr),
+      btnSave(nullptr),
+      btnCopy(nullptr),
+      btnPin(nullptr),
+      btnCancel(nullptr),
+      btnBreak(nullptr),
+      btnRect(nullptr),
+      btnEllipse(nullptr),
+      btnArrow(nullptr),
+      btnShapeColor(nullptr),
+      btnShapeWidthUp(nullptr),
+      btnShapeWidthDown(nullptr),
+      shapeWidthLabel(nullptr),
+      btnPenWidthUp(nullptr),
+      btnPenWidthDown(nullptr),
+      penWidthLabel(nullptr),
+      btnFontColor(nullptr),
+      btnFontSizeUp(nullptr),
+      btnFontSizeDown(nullptr),
+      fontSizeInput(nullptr),
+      btnFontFamily(nullptr),
+      btnStrengthUp(nullptr),
+      btnStrengthDown(nullptr),
+      strengthLabel(nullptr),
+      btnBlurStrengthDown(nullptr),
+      btnBlurStrengthUp(nullptr),
+      blurStrengthLabel(nullptr),
+      drawingBlur(false),
+      drawingEffect(false),
+      currentBlurStrength(20),
+      currentEffectStrength(20),
+      EffectBlockSize(10),
+      textClickIndex(-1),
+      potentialTextDrag(false)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_DeleteOnClose); // 关闭时自动删除
     setMouseTracking(true);
     setCursor(Qt::CrossCursor);
     setFocusPolicy(Qt::StrongFocus); // 确保窗口能接收键盘事件
@@ -87,20 +136,32 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
     // 图片生成文字描述
     m_aiManager = new AiManager(this);
 
-    // 连接 AI 处理成功的信号
-    connect(m_aiManager, &AiManager::descriptionGenerated, this, [this](QString text)
+    // 连接 AI 处理成功的信号 - 使用 QPointer 确保对象生命周期安全
+    // 注意：不能在 lambda 内直接检查 this，必须用 QPointer 在外部捕获
+    QPointer<ScreenshotWidget> self1(this);
+    connect(m_aiManager, &AiManager::descriptionGenerated, this, [self1](QString text)
             {
+                // 检查对象是否仍然有效
+                if (!self1) return;
+                
                 // 1. 将生成的文字复制到剪贴板
                 QClipboard *clipboard = QGuiApplication::clipboard();
-                clipboard->setText(text);
+                if (clipboard) {
+                    clipboard->setText(text);
+                }
 
                 // 2. 弹窗提示用户
-                QMessageBox::information(this, getText("ai_description_complete_title", "AI 识别完成"),
-                                         getText("ai_description_copied", "描述内容已复制到剪贴板：\n\n") + text); });
+                QMessageBox::information(self1, self1->getText("ai_description_complete_title", "AI 识别完成"),
+                                         self1->getText("ai_description_copied", "描述内容已复制到剪贴板：\n\n") + text); });
 
-    // 连接 AI 处理失败的信号
-    connect(m_aiManager, &AiManager::errorOccurred, this, [this](QString errorMsg)
-            { QMessageBox::warning(this, getText("ai_description_failed_title", "AI 识别失败"), errorMsg); });
+    // 连接 AI 处理失败的信号 - 使用 QPointer 确保对象生命周期安全
+    QPointer<ScreenshotWidget> self2(this);
+    connect(m_aiManager, &AiManager::errorOccurred, this, [self2](QString errorMsg)
+            { 
+                // 检查对象是否仍然有效
+                if (!self2) return;
+                
+                QMessageBox::warning(self2, self2->getText("ai_description_failed_title", "AI 识别失败"), errorMsg); });
 
     setupToolbar();
     setTextToolbar();
@@ -122,6 +183,58 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
 
 ScreenshotWidget::~ScreenshotWidget()
 {
+    // 断开所有信号连接以防止悬空指针访问
+    if (m_aiManager)
+    {
+        disconnect(m_aiManager, nullptr, this, nullptr);
+    }
+
+    disconnect(I18nManager::instance(), nullptr, this, nullptr);
+
+    // 清理文本输入框
+    if (textInput)
+    {
+        disconnect(textInput, nullptr, this, nullptr);
+        textInput->deleteLater();
+        textInput = nullptr;
+    }
+
+    // 清理工具栏
+    if (toolbar)
+    {
+        toolbar->deleteLater();
+        toolbar = nullptr;
+    }
+    if (penToolbar)
+    {
+        penToolbar->deleteLater();
+        penToolbar = nullptr;
+    }
+    if (shapesToolbar)
+    {
+        shapesToolbar->deleteLater();
+        shapesToolbar = nullptr;
+    }
+    if (fontToolbar)
+    {
+        fontToolbar->deleteLater();
+        fontToolbar = nullptr;
+    }
+    if (EffectToolbar)
+    {
+        EffectToolbar->deleteLater();
+        EffectToolbar = nullptr;
+    }
+    if (blurToolbar)
+    {
+        blurToolbar->deleteLater();
+        blurToolbar = nullptr;
+    }
+    if (sizeLabel)
+    {
+        sizeLabel->deleteLater();
+        sizeLabel = nullptr;
+    }
 }
 
 QString ScreenshotWidget::getText(const QString &key, const QString &defaultText) const
@@ -156,8 +269,8 @@ void ScreenshotWidget::initializeI18nConnection()
 
 void ScreenshotWidget::updateTooltips()
 {
-    if (!mainWindow)
-        return;
+    // 不再依赖 mainWindow,直接更新工具提示
+    // updateTooltips 使用 getText() 从 I18nManager 获取翻译,无需 mainWindow
 
     // 更新主工具栏按钮的工具提示
     if (btnShapes)
@@ -738,24 +851,32 @@ void ScreenshotWidget::startCaptureFullScreen()
     // 先启动常规截图
     startCapture();
 
-    // 然后立即设置为全屏模式
-    QTimer::singleShot(150, this, [this]()
-                       {
-            selectedRect = rect();
-            selected = true;
-            selecting = false;
+    // 使用 QPointer 安全地捕获 this 指针，防止对象被提前销毁
+    QPointer<ScreenshotWidget> self(this);
 
-            if (toolbar) {
-                toolbar->setParent(this);
-                toolbar->adjustSize();
-                updateToolbarPosition();
-                toolbar->setWindowFlags(Qt::Widget);
-                toolbar->raise();
-                toolbar->show();
-                toolbar->activateWindow();
+    // 然后立即设置为全屏模式
+    QTimer::singleShot(150, this, [self]()
+                       {
+            // 检查对象是否仍然存在
+            if (!self) {
+                return;
+            }
+            
+            self->selectedRect = self->rect();
+            self->selected = true;
+            self->selecting = false;
+
+            if (self->toolbar) {
+                self->toolbar->setParent(self);
+                self->toolbar->adjustSize();
+                self->updateToolbarPosition();
+                self->toolbar->setWindowFlags(Qt::Widget);
+                self->toolbar->raise();
+                self->toolbar->show();
+                self->toolbar->activateWindow();
             }
 
-            update(); });
+            self->update(); });
 }
 
 void ScreenshotWidget::paintEvent(QPaintEvent *event)

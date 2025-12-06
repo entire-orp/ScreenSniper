@@ -11,6 +11,7 @@
 #include <QColor>
 #include <QTextEdit>
 #include <QLineEdit>
+#include <QPointer>
 #include "i18nmanager.h"
 #include "pinwidget.h"
 #include "aimanager.h"
@@ -123,7 +124,7 @@ private slots:
 private:
     // 初始化I18n连接
     void initializeI18nConnection();
-    
+
     // 越界判断相关：
     // 水印相关
 #ifndef NO_OPENCV
@@ -182,7 +183,7 @@ private:
     void editExistingText(int textIndex);
     void handleNoneMode(const QPoint &clickPos);
 
-    //pin到桌面
+    // pin到桌面
     void pinToDesktop();
     // 窗口识别函数
     void captureWindow(QPoint mousePos);
@@ -249,7 +250,7 @@ private:
 #ifndef NO_OPENCV
     QPushButton *btnWatermark; // 水印按钮
 #endif
-    QPushButton *btnOCR; // OCR 按钮
+    QPushButton *btnOCR;           // OCR 按钮
     QPushButton *btnAIDescription; // AI图片描述按钮
 
     // 尺寸显示标签
@@ -365,9 +366,9 @@ private:
     // QRect currentWindowRect;
 
     // 国际化相关
-    QWidget *mainWindow;
+    QPointer<QWidget> mainWindow;
 
-    //图片生成文字描述相关
+    // 图片生成文字描述相关
     AiManager *m_aiManager;
     void onAiDescriptionBtnClicked();
 };

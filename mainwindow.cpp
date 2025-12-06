@@ -20,6 +20,7 @@
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QDialogButtonBox>
+#include <QPointer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -148,9 +149,15 @@ void MainWindow::onCaptureScreen()
     //    connect(widget, &ScreenshotWidget::screenshotCancelled, this, [this]()
     //            { show(); });
 
+    // 使用 QPointer 安全地捕获指针，防止悬空指针
+    QPointer<ScreenshotWidget> safeWidget(widget);
     // 延迟让窗口完全隐藏后再截图
-    QTimer::singleShot(300, widget, [widget]()
-                       { widget->startCaptureFullScreen(); });
+    QTimer::singleShot(300, this, [safeWidget]()
+                       { 
+                           // 检查对象是否仍然有效
+                           if (safeWidget) {
+                               safeWidget->startCaptureFullScreen(); 
+                           } });
 }
 
 void MainWindow::onCaptureArea()
@@ -170,8 +177,15 @@ void MainWindow::onCaptureArea()
     //    connect(widget, &ScreenshotWidget::screenshotCancelled, this, [this]()
     //            { show(); });
 
+    // 使用 QPointer 安全地捕获指针，防止悬空指针
+    QPointer<ScreenshotWidget> safeWidget(widget);
     // 延迟让窗口完全隐藏后再截图
-    QTimer::singleShot(300, widget, &ScreenshotWidget::startCapture);
+    QTimer::singleShot(300, this, [safeWidget]()
+                       { 
+                           // 检查对象是否仍然有效
+                           if (safeWidget) {
+                               safeWidget->startCapture(); 
+                           } });
 }
 
 void MainWindow::onCaptureWindow()
