@@ -490,7 +490,7 @@ void ScreenshotWidget::setupToolbar()
     connect(btnAIDescription, &QPushButton::clicked, this, &ScreenshotWidget::onAiDescriptionBtnClicked);
 
     connect(btnShapes, &QPushButton::clicked, this, [this]()
-            { toggleSubToolbar(shapesToolbar); });
+            { selected = true;toggleSubToolbar(shapesToolbar); });
 
     connect(btnText, &QPushButton::clicked, this, [this]()
             {
