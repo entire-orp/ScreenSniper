@@ -619,6 +619,7 @@ void ScreenshotWidget::setupToolbar()
     connect(btnAutoFaceBlur, &QPushButton::clicked, this, [this]()
             {
 #ifndef NO_OPENCV
+                selected=true;
                 if (!selected || selectedRect.isEmpty())
                 {
                     QMessageBox::warning(this,
@@ -1198,8 +1199,58 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
 
         // 放大镜通常只在普通模式且非选区调整时显示
         if (showMagnifier && !selected) {
-            // 此处调用绘制放大镜函数 (代码略，参考之前)
-            // 需使用 toPhysicalRect(rect, true)
+            int magnifierSize = 120; // 放大镜大小
+            int magnifierScale = 4;  // 放大倍数
+
+            // 计算放大镜位置(在鼠标右下方)
+            int magnifierX = currentMousePos.x() + 20;
+            int magnifierY = currentMousePos.y() + 20;
+
+            // 确保放大镜不超出屏幕
+            if (magnifierX + magnifierSize > width())
+                magnifierX = currentMousePos.x() - magnifierSize - 20;
+            if (magnifierY + magnifierSize > height())
+                magnifierY = currentMousePos.y() - magnifierSize - 20;
+
+            // 从原始截图中获取鼠标位置附近的区域（物理像素）
+            int sourceSize = magnifierSize / magnifierScale;
+            QRect logicalSourceRect(
+                currentMousePos.x() - sourceSize / 2,
+                currentMousePos.y() - sourceSize / 2,
+                sourceSize,
+                sourceSize);
+
+            // 确保源区域在窗口范围内
+            logicalSourceRect = logicalSourceRect.intersected(QRect(0, 0, width(), height()));
+
+            // 转换为物理像素坐标（考虑虚拟桌面偏移）
+            QPoint windowPos = geometry().topLeft();
+            QPoint offset = windowPos - virtualGeometryTopLeft;
+
+            QRect physicalSourceRect(
+                (logicalSourceRect.x() + offset.x()) * devicePixelRatio,
+                (logicalSourceRect.y() + offset.y()) * devicePixelRatio,
+                logicalSourceRect.width() * devicePixelRatio,
+                logicalSourceRect.height() * devicePixelRatio);
+
+            if (!physicalSourceRect.isEmpty())
+            {
+                // 绘制放大镜背景
+                painter.setPen(QPen(QColor(0, 150, 255), 2));
+                painter.setBrush(Qt::white);
+                painter.drawRect(magnifierX, magnifierY, magnifierSize, magnifierSize);
+
+                // 绘制放大的图像
+                QRect targetRect(magnifierX, magnifierY, magnifierSize, magnifierSize);
+                painter.drawPixmap(targetRect, screenPixmap, physicalSourceRect);
+
+                // 绘制十字准星
+                painter.setPen(QPen(Qt::red, 1));
+                int centerX = magnifierX + magnifierSize / 2;
+                int centerY = magnifierY + magnifierSize / 2;
+                painter.drawLine(centerX - 10, centerY, centerX + 10, centerY);
+                painter.drawLine(centerX, centerY - 10, centerX, centerY + 10);
+            }
         }
     }
 
@@ -1207,7 +1258,7 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
     // 3. 统一绘制标注 (形状、画笔、文字)
     // =========================================================
     // 核心思想：无论哪种模式，都在 paintAreaRect 范围内绘制。
-    // 如果没有选区(且非长截图)，paintAreaRect为空，自然不会画出东西，符合逻辑。
+    // 如果没有选区(且非长截图)，paintAreaRect为空，自然不会画出东西
 
     bool shouldDrawAnnotations = (captureMode == ScrollMode) || (selected && !paintAreaRect.isEmpty());
 
@@ -1236,11 +1287,24 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
         }
 
         // 3.4 文本
-        for (int i = 0; i < texts.size(); ++i) {
-            // 编辑状态下跳过绘制当前文本
-            if (editingTextIndex == i && isTextInputActive) continue;
-            const auto &text = texts[i];
-            drawText(painter, text.position, text.text, text.color, text.font);
+        if (selected)
+        { // 只在选中区域后绘制文字
+            for (int i = 0; i < texts.size(); ++i)
+            {
+                // 如果正在编辑这个文字的内容（双击编辑，显示输入框），跳过绘制（隐藏原文字，只显示输入框）
+                // 但如果只是单击修改属性（isTextInputActive = false），不隐藏文字
+                if (editingTextIndex == i && isTextInputActive)
+                {
+                    continue;  // 跳过绘制正在编辑的文字
+                }
+                const DrawnText &text = texts[i];
+                // 检查文字是否与截图框有重叠
+                if (text.rect.intersects(selectedRect))
+                {
+                    // 绘制文字，使用原始位置，不再添加额外偏移
+                    drawText(painter, text.position, text.text, text.color, text.font);
+                }
+            }
         }
 
         // 3.5 画笔轨迹 (已完成)
@@ -4198,7 +4262,7 @@ void ScreenshotWidget::performOCR()
 // 图片生成文字描述
 void ScreenshotWidget::onAiDescriptionBtnClicked()
 {
-    if (selectedRect.isNull() || !selected)
+    if (selectedRect.isNull() )
     {
         QMessageBox::warning(this, getText("ai_description_warning_title", "提示"),
                              getText("ai_description_no_selection", "请先选择截图区域"));
