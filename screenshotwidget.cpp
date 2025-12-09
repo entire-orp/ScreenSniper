@@ -1362,7 +1362,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
         QPoint clickPos = event->pos();
 
         // 处理文本输入框相关逻辑
-        if (isTextInputActive && textInput && textInput->isVisible())
+        if (selected && isTextInputActive && textInput && textInput->isVisible())
         {
             if (!textInput->geometry().contains(clickPos))
             {
@@ -1394,7 +1394,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
         }
 
         // 如果处于文字绘制模式（优先处理，避免触发区域重新选择）
-        if (currentDrawMode == Text && !isTextInputActive)
+        if (selected && currentDrawMode == Text && !isTextInputActive)
         {
             // 如果已经选中区域，直接添加文字
             if (selected)
@@ -1408,50 +1408,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
             return;
         }
 
-        // 如果已经在调整状态，不应该触发其他逻辑
-        if (m_isadjust)
-        {
-            return;
-        }
 
-        // 优先检查是否点击了调整手柄（四个角和四个边的中心点）- 只在 None 模式下允许调整
-        if (selected && !selectedRect.isEmpty() && currentDrawMode == None)
-        {
-            // 更新 startPoint 和 endPoint 为 selectedRect 的值，以便 mouseIsAdjust 能正确检测
-            startPoint = selectedRect.topLeft();
-            endPoint = selectedRect.bottomRight();
-            // 先调用 mouseIsAdjust 来检测点击位置和设置方向、光标
-            mouseIsAdjust(clickPos);
-
-            // 检查是否点击了调整手柄（四个角、四个边的中心点）
-            bool isAdjustHandle = (m_adjectDirection == TopLeftCorner ||
-                                   m_adjectDirection == TopRightCorner ||
-                                   m_adjectDirection == LeftBottom ||
-                                   m_adjectDirection == RightBottom ||
-                                   m_adjectDirection == LeftCenterPoint ||
-                                   m_adjectDirection == RightCenterPoint ||
-                                   m_adjectDirection == TopCenterPoint ||
-                                   m_adjectDirection == BottomCenterPoint);
-
-            // 检查是否点击了边缘或内部（用于移动整个矩形）
-            // mouseIsAdjust 会在点击边缘或内部时设置 m_adjectDirection = MoveAll 和 cursor = SizeAllCursor
-            bool isMoveArea = (cursor().shape() == Qt::SizeAllCursor &&
-                               m_adjectDirection == MoveAll);
-
-            // 如果点击了调整手柄或移动区域，设置 m_isadjust = true
-            if (isAdjustHandle || isMoveArea)
-            {
-                m_isadjust = true;
-                // 保存鼠标相对于选中区域的偏移量，用于拖拽调整/移动
-                m_relativeDistance = QRect(clickPos.x() - selectedRect.left(),
-                                           clickPos.y() - selectedRect.top(),
-                                           selectedRect.width(),
-                                           selectedRect.height());
-                // 如果点击了调整手柄或移动区域，直接返回，不处理其他功能
-                // 注意：不要重置 selected 状态，保持选中状态以便拖拽调整
-                return;
-            }
-        }
 
         // 处理文字编辑模式（None模式下的其他操作）
         if (selected && currentDrawMode == None)
@@ -1529,63 +1486,30 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
         }
         else if (!selected)
         {
-            // 在文字模式下，不应该重新选择区域
-            if (currentDrawMode == Text)
+            // 是否处于调节位置
+            if (cursor().shape() != Qt::CrossCursor)
             {
-                // 文字模式下，如果还没有选中区域，允许选择区域
-                // 但选择后应该自动切换到文字输入模式
-                // 是否处于调节位置
-                if (cursor().shape() != Qt::CrossCursor)
+                m_isadjust = true;
+                if (cursor().shape() == Qt::SizeAllCursor)
                 {
-                    m_isadjust = true;
-                    if (cursor().shape() == Qt::SizeAllCursor)
-                    {
-                        m_relativeDistance.setX(event->pos().x() - startPoint.x());
-                        m_relativeDistance.setY(event->pos().y() - startPoint.y());
-                        m_relativeDistance.setWidth(abs(startPoint.x() - endPoint.x()));
-                        m_relativeDistance.setHeight(abs(startPoint.y() - endPoint.y()));
-                    }
-                    if (toolbar)
-                        toolbar->hide();
+                    m_relativeDistance.setX(event->pos().x() - startPoint.x());
+                    m_relativeDistance.setY(event->pos().y() - startPoint.y());
+                    m_relativeDistance.setWidth(abs(startPoint.x() - endPoint.x()));
+                    m_relativeDistance.setHeight(abs(startPoint.y() - endPoint.y()));
                 }
-                else
-                {
-                    startPoint = event->pos();
-                    endPoint = event->pos();
-                    currentMousePos = event->pos();
-                }
-
-                selecting = true;
-                selected = false;
+                if (toolbar)
+                    toolbar->hide();
             }
             else
             {
-                // 否则开始选择选择新区域
-
-                // 是否处于调节位置
-                if (cursor().shape() != Qt::CrossCursor)
-                {
-                    m_isadjust = true;
-                    if (cursor().shape() == Qt::SizeAllCursor)
-                    {
-                        m_relativeDistance.setX(event->pos().x() - startPoint.x());
-                        m_relativeDistance.setY(event->pos().y() - startPoint.y());
-                        m_relativeDistance.setWidth(abs(startPoint.x() - endPoint.x()));
-                        m_relativeDistance.setHeight(abs(startPoint.y() - endPoint.y()));
-                    }
-                    if (toolbar)
-                        toolbar->hide();
-                }
-                else
-                {
-                    startPoint = event->pos();
-                    endPoint = event->pos();
-                    currentMousePos = event->pos();
-                }
-
-                selecting = true;
-                selected = false;
+                startPoint = event->pos();
+                endPoint = event->pos();
+                currentMousePos = event->pos();
             }
+
+            selecting = true;
+            selected = false;
+
             // showMagnifier已经在startCapture时设置为true，这里不需要重复设置
             if (toolbar)
                 toolbar->hide();
@@ -1709,77 +1633,14 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
         update();
         return; // 拖拽时直接返回，不处理其他逻辑
     }
-    else if (m_isadjust && selected)
+    else if (!selected && m_isadjust && selecting)
     {
-        // 调整选中区域大小
-        QPoint currentPos = event->pos();
-
-        // 限制在窗口范围内
-        currentPos.setX(qMax(0, qMin(width(), currentPos.x())));
-        currentPos.setY(qMax(0, qMin(height(), currentPos.y())));
-
-        QRect newRect = selectedRect;
-
-        switch (m_adjectDirection)
-        {
-        case TopLeftCorner:
-            newRect.setTopLeft(currentPos);
-            break;
-        case TopRightCorner:
-            newRect.setTopRight(currentPos);
-            break;
-        case LeftBottom:
-            newRect.setBottomLeft(currentPos);
-            break;
-        case RightBottom:
-            newRect.setBottomRight(currentPos);
-            break;
-        case LeftCenterPoint:
-            newRect.setLeft(currentPos.x());
-            break;
-        case RightCenterPoint:
-            newRect.setRight(currentPos.x());
-            break;
-        case TopCenterPoint:
-            newRect.setTop(currentPos.y());
-            break;
-        case BottomCenterPoint:
-            newRect.setBottom(currentPos.y());
-            break;
-        case MoveAll:
-        {
-            // m_relativeDistance 保存的是鼠标点击位置相对于选中区域左上角的偏移量
-            QPoint offset = currentPos - QPoint(m_relativeDistance.x(), m_relativeDistance.y());
-            newRect.moveTopLeft(offset);
-            // 确保不超出窗口边界
-            if (newRect.left() < 0)
-                newRect.moveLeft(0);
-            if (newRect.top() < 0)
-                newRect.moveTop(0);
-            if (newRect.right() > width())
-                newRect.moveRight(width());
-            if (newRect.bottom() > height())
-                newRect.moveBottom(height());
+        if(cursor().shape() != Qt::CrossCursor){
+            //更新坐标
+            mouseIsAdjust(event->pos());
         }
-        break;
-        default:
-            break;
-        }
-
-        // 确保矩形有效（宽度和高度至少为1）
-        if (newRect.width() > 0 && newRect.height() > 0)
-        {
-            selectedRect = newRect.normalized();
-            // 限制更新频率，避免过度重绘导致卡顿
-            static qint64 lastUpdateTime = 0;
-            qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-            if (currentTime - lastUpdateTime > 16)
-            { // 约60fps
-                update();
-                lastUpdateTime = currentTime;
-            }
-        }
-        return;
+        showMagnifier = true;
+        update();
     }
     else if (!selected)
     {
@@ -1963,38 +1824,28 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent *event)
             textClickIndex = -1;
             return; // 直接返回，不处理区域选择逻辑
         }
-        else if (m_isadjust && selected)
-        {
-            // 结束调整（只有在调整选中区域时才结束）
-            m_isadjust = false;
-            // 确保 selectedRect 已更新（mouseMoveEvent 中已更新）
-            startPoint = selectedRect.topLeft();
-            endPoint = selectedRect.bottomRight();
-            // 更新工具栏位置并显示
-            if (!selectedRect.isEmpty())
-            {
-                updateToolbarPosition();
-                toolbar->show();
-            }
-            update();
-            return;
-        }
         // else if(selecting)
         else if (selecting)
         {
             // 原有选择逻辑
             selecting = false;
-            selected = true;
+            selected = false;
             showMagnifier = false;
             // 关闭调节
-            m_isadjust = false;
-            if (m_selectedWindow && (startPoint.x() == endPoint.x()) && (startPoint.y() == endPoint.y()))
-            {
-                m_selectedWindow = false;
+            if(m_isadjust || m_selectedWindow){
+                if(m_isadjust){
+                    m_isadjust = false;
+                    selectedRect = QRect(startPoint,endPoint).normalized();
+                }
+                if (m_selectedWindow && (startPoint.x() == endPoint.x()) && (startPoint.y() == endPoint.y()))
+                {
+                    m_selectedWindow = false;
+                }
                 startPoint.setX(selectedRect.x());
                 startPoint.setY(selectedRect.y());
                 endPoint.setX(startPoint.x() + selectedRect.width());
                 endPoint.setY(startPoint.y() + selectedRect.height());
+                mouseIsAdjust(event->pos());
             }
             else
             {
@@ -3732,97 +3583,109 @@ void ScreenshotWidget::showWatermarkDialog() // 嵌入水印
 
 void ScreenshotWidget::mouseIsAdjust(QPoint mousePos)
 {
-    // 使用 selectedRect 的坐标（如果已选择区域），否则使用 startPoint 和 endPoint
-    QRect rect = selected ? selectedRect : QRect(startPoint, endPoint).normalized();
-    if (rect.isEmpty())
-    {
-        setCursor(Qt::CrossCursor);
-        return;
-    }
 
-    // 为了兼容用户代码逻辑，使用 startPoint 和 endPoint
-    QPoint topLeft = rect.topLeft();
-    QPoint topRight = rect.topRight();
-    QPoint bottomLeft = rect.bottomLeft();
-    QPoint bottomRight = rect.bottomRight();
-
-    // 调整过程中的光标更新在 mouseMoveEvent 中处理，这里只处理检测阶段
-    if (!m_isadjust)
-    {
-        // 左上角
-        if (mousePos.x() >= (topLeft.x() - 6) && mousePos.x() <= (topLeft.x() + 6) &&
-            mousePos.y() >= (topLeft.y() - 6) && mousePos.y() <= (topLeft.y() + 6))
-        {
+    if(m_isadjust){
+        //左上角
+        if(m_adjectDirection == TopLeftCorner){
+            //if(startPoint.x())
+            startPoint = mousePos;
+        }
+        //右上角
+        else if(m_adjectDirection == TopRightCorner){
+            startPoint.setY(mousePos.y());
+            endPoint.setX(mousePos.x());
+        }
+        // 左下角
+        else if(m_adjectDirection == LeftBottom){
+            startPoint.setX(mousePos.x());
+            endPoint.setY(mousePos.y());
+        }
+        // 右下角
+        else if(m_adjectDirection == RightBottom){
+            endPoint = mousePos;
+        }
+        // 左边中心点
+        else if(m_adjectDirection == LeftCenterPoint){
+            startPoint.setX(mousePos.x());
+        }
+        // 上边中心点
+        else if(m_adjectDirection == TopCenterPoint){
+            startPoint.setY(mousePos.y());
+        }
+        // 右边中心点
+        else if(m_adjectDirection == RightCenterPoint){
+            endPoint.setX(mousePos.x());
+        }
+        // 下边中心点
+        else if(m_adjectDirection == BottomCenterPoint){
+            endPoint.setY(mousePos.y());
+        }
+        //整体移动
+        else if(m_adjectDirection == MoveAll){
+            startPoint.setX(mousePos.x() - m_relativeDistance.x());
+            startPoint.setY(mousePos.y() - m_relativeDistance.y());
+            endPoint.setX(startPoint.x() + m_relativeDistance.width());
+            endPoint.setY(startPoint.y() + m_relativeDistance.height());
+        }
+    }else{
+        //左上角
+        if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+            mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
             setCursor(Qt::SizeFDiagCursor);
             m_adjectDirection = TopLeftCorner;
         }
         // 右上角
-        else if (mousePos.x() >= (topRight.x() - 6) && mousePos.x() <= (topRight.x() + 6) &&
-                 mousePos.y() >= (topLeft.y() - 6) && mousePos.y() <= (topLeft.y() + 6))
-        {
+        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
             setCursor(Qt::SizeBDiagCursor);
             m_adjectDirection = TopRightCorner;
         }
         // 左下角
-        else if (mousePos.x() >= (bottomLeft.x() - 6) && mousePos.x() <= (bottomLeft.x() + 6) &&
-                 mousePos.y() >= (bottomLeft.y() - 6) && mousePos.y() <= (bottomLeft.y() + 6))
-        {
+        else if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
             m_adjectDirection = LeftBottom;
             setCursor(Qt::SizeBDiagCursor);
         }
         // 右下角
-        else if (mousePos.x() >= (bottomRight.x() - 6) && mousePos.x() <= (bottomRight.x() + 6) &&
-                 mousePos.y() >= (bottomRight.y() - 6) && mousePos.y() <= (bottomRight.y() + 6))
-        {
+        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
             m_adjectDirection = RightBottom;
             setCursor(Qt::SizeFDiagCursor);
         }
         // 左边中心点
-        else if (mousePos.x() >= (rect.left() - 6) && mousePos.x() <= (rect.left() + 6) &&
-                 mousePos.y() >= ((rect.top() + rect.bottom()) / 2 - 6) && mousePos.y() <= ((rect.top() + rect.bottom()) / 2 + 6))
-        {
+        else if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6)){
             m_adjectDirection = LeftCenterPoint;
             setCursor(Qt::SizeHorCursor);
         }
         // 上边中心点
-        else if (mousePos.x() >= ((rect.left() + rect.right()) / 2 - 6) && mousePos.x() <= ((rect.left() + rect.right()) / 2 + 6) &&
-                 mousePos.y() >= (rect.top() - 6) && mousePos.y() <= (rect.top() + 6))
-        {
+        else if(mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
+                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
             m_adjectDirection = TopCenterPoint;
             setCursor(Qt::SizeVerCursor);
         }
         // 右边中心点
-        else if (mousePos.x() >= (rect.right() - 6) && mousePos.x() <= (rect.right() + 6) &&
-                 mousePos.y() >= ((rect.top() + rect.bottom()) / 2 - 6) && mousePos.y() <= ((rect.top() + rect.bottom()) / 2 + 6))
-        {
+        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6)){
             m_adjectDirection = RightCenterPoint;
             setCursor(Qt::SizeHorCursor);
         }
         // 下边中心点
-        else if (mousePos.x() >= ((rect.left() + rect.right()) / 2 - 6) && mousePos.x() <= ((rect.left() + rect.right()) / 2 + 6) &&
-                 mousePos.y() >= (rect.bottom() - 6) && mousePos.y() <= (rect.bottom() + 6))
-        {
+        else if(mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
             m_adjectDirection = BottomCenterPoint;
             setCursor(Qt::SizeVerCursor);
         }
         // 四条边
-        else if (((mousePos.x() >= rect.left() - 6 && mousePos.x() <= rect.left() + 6) && (mousePos.y() >= rect.top() && mousePos.y() <= rect.bottom())) ||
-                 ((mousePos.x() >= rect.right() - 6 && mousePos.x() <= rect.right() + 6) && (mousePos.y() >= rect.top() && mousePos.y() <= rect.bottom())) ||
-                 ((mousePos.x() >= rect.left() && mousePos.x() <= rect.right()) && (mousePos.y() >= rect.top() - 6 && mousePos.y() <= rect.top() + 6)) ||
-                 ((mousePos.x() >= rect.left() && mousePos.x() <= rect.right()) && (mousePos.y() >= rect.bottom() - 6 && mousePos.y() <= rect.bottom() + 6)))
-        {
+        else if(((mousePos.x() >= startPoint.x() - 6 && mousePos.x() <= startPoint.x() + 6) && (mousePos.y() >= startPoint.y() && mousePos.y() <= endPoint.y())) ||
+                 ((mousePos.x() >= endPoint.x() - 6 && mousePos.x() <= endPoint.x() + 6) && (mousePos.y() >= startPoint.y() && mousePos.y() <= endPoint.y())) ||
+                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= startPoint.y() - 6 &&mousePos.y() <= startPoint.y() + 6)) ||
+                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= endPoint.y() - 6 &&mousePos.y() <= endPoint.y() + 6))){
             m_adjectDirection = MoveAll;
             setCursor(Qt::SizeAllCursor);
         }
-        // 矩形内部（不在边缘或调整手柄上）
-        else if (rect.contains(mousePos))
-        {
-            m_adjectDirection = MoveAll;
-            setCursor(Qt::SizeAllCursor);
-        }
-        // 其余位置恢复正常
-        else
-        {
+        //其余位置恢复正常
+        else{
             setCursor(Qt::CrossCursor);
         }
     }
