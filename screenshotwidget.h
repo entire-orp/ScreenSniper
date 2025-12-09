@@ -12,6 +12,7 @@
 #include <QTextEdit>
 #include <QLineEdit>
 #include <QPointer>
+#include <functional>
 #include "i18nmanager.h"
 #include "pinwidget.h"
 #include "aimanager.h"
@@ -83,7 +84,7 @@ class ScreenshotWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit ScreenshotWidget(QWidget* parent = nullptr);
+    explicit ScreenshotWidget(QWidget *parent = nullptr);
     ~ScreenshotWidget();
 
     void startCapture();
@@ -166,6 +167,8 @@ private:
     QPushButton *createColorButton(QWidget *parent, const QColor &color); // 创建统一的颜色按钮
     void updateColorButton(QPushButton *button, const QColor &color);     // 更新颜色按钮样式
 
+    // 通用截图处理函数，使用回调函数处理最终输出
+    void processScreenshot(std::function<void(QPixmap &)> outputHandler);
     void saveScreenshot();
     void copyToClipboard();
     void cancelCapture();
@@ -185,8 +188,8 @@ private:
     void updateFontToolbarPosition();
     void editExistingText(int textIndex);
     void handleNoneMode(const QPoint &clickPos);
-    void selectTextForPropertyEdit(int textIndex);  // 单击文字时修改属性
-    void saveTextProperties();  // 保存文字属性（不修改文本内容）
+    void selectTextForPropertyEdit(int textIndex); // 单击文字时修改属性
+    void saveTextProperties();                     // 保存文字属性（不修改文本内容）
 
     // pin到桌面
     void pinToDesktop();
@@ -244,15 +247,15 @@ private:
     QPushButton *btnCopy;
     QPushButton *btnCancel;
     QPushButton *btnBreak;
-    QPushButton *btnRect;    // 矩形工具
-    QPushButton *btnEllipse; // 椭圆工具
-    QPushButton *btnArrow;   // 箭头工具
-    QPushButton *btnText;    // 文字工具
-    QPushButton *btnPen;     // 画笔工具
-    QPushButton *btnMosaic;  // 马赛克按钮
-    QPushButton *btnBlur;    // 高斯模糊按钮
-    QPushButton *btnAutoFaceBlur;  // 自动人脸打码按钮
-    QPushButton *btnPin;     // Pin到桌面按钮
+    QPushButton *btnRect;         // 矩形工具
+    QPushButton *btnEllipse;      // 椭圆工具
+    QPushButton *btnArrow;        // 箭头工具
+    QPushButton *btnText;         // 文字工具
+    QPushButton *btnPen;          // 画笔工具
+    QPushButton *btnMosaic;       // 马赛克按钮
+    QPushButton *btnBlur;         // 高斯模糊按钮
+    QPushButton *btnAutoFaceBlur; // 自动人脸打码按钮
+    QPushButton *btnPin;          // Pin到桌面按钮
 #ifndef NO_OPENCV
     QPushButton *btnWatermark; // 水印按钮
 #endif
@@ -260,7 +263,7 @@ private:
     QPushButton *btnAIDescription; // AI图片描述按钮
 
     // 尺寸显示标签
-    QLabel* sizeLabel;
+    QLabel *sizeLabel;
 
     // 模糊相关
     bool drawingEffect = false;
@@ -378,17 +381,17 @@ private:
     // 图片生成文字描述相关
     AiManager *m_aiManager;
     void onAiDescriptionBtnClicked();
-    
+
     // 自动人脸打码相关函数
-    void autoDetectAndBlurFaces();  // 自动检测并打码人脸
-    
+    void autoDetectAndBlurFaces(); // 自动检测并打码人脸
+
 #ifndef NO_OPENCV
     // 自动人脸打码相关
-    FaceDetector* faceDetector;  // 人脸检测器实例
-    bool autoFaceBlurEnabled;  // 是否启用自动人脸打码（默认false）
+    FaceDetector *faceDetector; // 人脸检测器实例
+    bool autoFaceBlurEnabled;   // 是否启用自动人脸打码（默认false）
 #else
-    void* faceDetector;  // 占位符
-    bool autoFaceBlurEnabled;  // 是否启用自动人脸打码（默认false）
+    void *faceDetector;       // 占位符
+    bool autoFaceBlurEnabled; // 是否启用自动人脸打码（默认false）
 #endif
 };
 

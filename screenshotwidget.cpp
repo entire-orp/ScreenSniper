@@ -125,11 +125,13 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
       textClickIndex(-1),
       potentialTextDrag(false),
       textDoubleClicked(false),
-      autoFaceBlurEnabled(false)  // 默认禁用自动人脸打码，需要用户手动启用
+      autoFaceBlurEnabled(false) // 默认禁用自动人脸打码，需要用户手动启用
 #ifndef NO_OPENCV
-      ,faceDetector(new FaceDetector(true))  // 创建人脸检测器，优先使用 DNN 模型
+      ,
+      faceDetector(new FaceDetector(true)) // 创建人脸检测器，优先使用 DNN 模型
 #else
-      ,faceDetector(nullptr)  // OpenCV未启用时为空
+      ,
+      faceDetector(nullptr) // OpenCV未启用时为空
 #endif
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
@@ -141,7 +143,7 @@ ScreenshotWidget::ScreenshotWidget(QWidget *parent)
 
     // 初始化I18n连接
     initializeI18nConnection();
-    
+
     // 初始化人脸检测器
 #ifndef NO_OPENCV
     faceDetector->initialize();
@@ -434,13 +436,13 @@ void ScreenshotWidget::setupToolbar()
 
     layout->addWidget(btnMosaic); // 马赛克按钮
     layout->addWidget(btnBlur);   // 高斯模糊按钮
-    
+
     btnAutoFaceBlur = new QPushButton(toolbar);
     btnAutoFaceBlur->setIcon(QIcon(":/icons/icons/face_blur.svg"));
     btnAutoFaceBlur->setIconSize(QSize(20, 20));
     btnAutoFaceBlur->setToolTip(getText("tooltip_auto_face_blur", "自动人脸打码"));
     btnAutoFaceBlur->setFixedSize(36, 36);
-    layout->addWidget(btnAutoFaceBlur);  // 自动人脸打码按钮
+    layout->addWidget(btnAutoFaceBlur); // 自动人脸打码按钮
 
 #ifndef NO_OPENCV
     layout->addWidget(btnWatermark); // 水印按钮
@@ -531,47 +533,51 @@ void ScreenshotWidget::setupToolbar()
                 if (toolbar)
                     toolbar->show();
                 toggleSubToolbar(nullptr); });
-    
+
     // 连接自动人脸打码按钮 - 点击后直接触发人脸检测和打码
-    connect(btnAutoFaceBlur, &QPushButton::clicked, this, [this]() {
+    connect(btnAutoFaceBlur, &QPushButton::clicked, this, [this]()
+            {
 #ifndef NO_OPENCV
-        if (!selected || selectedRect.isEmpty()) {
-            QMessageBox::warning(this, 
-                getText("face_blur_error_title", "错误"), 
-                getText("face_blur_no_selection", "请先选择截图区域"));
-            return;
-        }
-        
-        // 检查人脸检测器是否可用
-        if (!faceDetector) {
-            QMessageBox::critical(this, 
-                getText("face_blur_error_title", "错误"), 
-                getText("face_blur_detector_null", "人脸检测器未初始化，请检查 OpenCV 配置"));
-            return;
-        }
-        
-        // 检查是否已初始化
-        if (!faceDetector->isReady()) {
-            qDebug() << "人脸检测器未初始化，尝试重新初始化...";
-            if (!faceDetector->initialize()) {
-                QMessageBox::critical(this, 
-                    getText("face_blur_error_title", "错误"), 
-                    getText("face_blur_init_failed", "人脸检测器初始化失败\n\n可能的原因：\n1. 模型文件缺失（opencv_face_detector_uint8.pb 和 opencv_face_detector.pbtxt.txt）\n2. OpenCV 库未正确配置\n\n请检查 models 目录下是否有模型文件"));
-                return;
-            }
-        }
-        
-        qDebug() << "点击自动打码按钮，触发人脸检测";
-        QTimer::singleShot(100, this, [this]() {
-            autoDetectAndBlurFaces();
-        });
+                if (!selected || selectedRect.isEmpty())
+                {
+                    QMessageBox::warning(this,
+                                         getText("face_blur_error_title", "错误"),
+                                         getText("face_blur_no_selection", "请先选择截图区域"));
+                    return;
+                }
+
+                // 检查人脸检测器是否可用
+                if (!faceDetector)
+                {
+                    QMessageBox::critical(this,
+                                          getText("face_blur_error_title", "错误"),
+                                          getText("face_blur_detector_null", "人脸检测器未初始化，请检查 OpenCV 配置"));
+                    return;
+                }
+
+                // 检查是否已初始化
+                if (!faceDetector->isReady())
+                {
+                    qDebug() << "人脸检测器未初始化，尝试重新初始化...";
+                    if (!faceDetector->initialize())
+                    {
+                        QMessageBox::critical(this,
+                                              getText("face_blur_error_title", "错误"),
+                                              getText("face_blur_init_failed", "人脸检测器初始化失败\n\n可能的原因：\n1. 模型文件缺失（opencv_face_detector_uint8.pb 和 opencv_face_detector.pbtxt.txt）\n2. OpenCV 库未正确配置\n\n请检查 models 目录下是否有模型文件"));
+                        return;
+                    }
+                }
+
+                qDebug() << "点击自动打码按钮，触发人脸检测";
+                QTimer::singleShot(100, this, [this]()
+                                   { autoDetectAndBlurFaces(); });
 #else
-        QMessageBox::information(this, 
-            getText("face_blur_not_available_title", "功能不可用"), 
-            getText("face_blur_opencv_disabled", "人脸识别功能需要 OpenCV 支持\n\n当前编译版本已禁用 OpenCV（NO_OPENCV 已定义）\n\n要启用此功能，请：\n1. 安装 OpenCV 库\n2. 在 ScreenSniper.pro 中配置 OpenCV 路径\n3. 移除 DEFINES += NO_OPENCV 定义\n4. 重新编译项目"));
+                QMessageBox::information(this,
+                                         getText("face_blur_not_available_title", "功能不可用"),
+                                         getText("face_blur_opencv_disabled", "人脸识别功能需要 OpenCV 支持\n\n当前编译版本已禁用 OpenCV（NO_OPENCV 已定义）\n\n要启用此功能，请：\n1. 安装 OpenCV 库\n2. 在 ScreenSniper.pro 中配置 OpenCV 路径\n3. 移除 DEFINES += NO_OPENCV 定义\n4. 重新编译项目"));
 #endif
-    });
-    
+            });
+
 #ifndef NO_OPENCV
     connect(btnWatermark, &QPushButton::clicked, this, [this]()
             {
@@ -940,8 +946,8 @@ void ScreenshotWidget::startCaptureFullScreen()
                 self->toolbar->show();
                 self->toolbar->activateWindow();
             }
-            
-            // 自动检测并打码人脸（延迟执行，避免阻塞UI）
+
+        // 自动检测并打码人脸（延迟执行，避免阻塞UI）
 #ifndef NO_OPENCV
             if (self->autoFaceBlurEnabled) {
                 QTimer::singleShot(100, self, [self]() {
@@ -1050,7 +1056,7 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
         // 计算窗口偏移（与绘制选中区域时的逻辑保持一致）
         QPoint windowPos = geometry().topLeft();
         QPoint offset = windowPos - virtualGeometryTopLeft;
-        
+
         for (int i = 0; i < EffectAreas.size(); ++i)
         {
             const QRect &area = EffectAreas[i];
@@ -1068,7 +1074,7 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
             double physicalY = (logicalArea.y() + offset.y()) * devicePixelRatio;
             double physicalW = logicalArea.width() * devicePixelRatio;
             double physicalH = logicalArea.height() * devicePixelRatio;
-            
+
             QRect physicalArea(
                 qRound(physicalX),
                 qRound(physicalY),
@@ -1077,7 +1083,8 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
 
             // 确保物理区域在屏幕截图范围内
             physicalArea = physicalArea.intersected(screenPixmap.rect());
-            if (physicalArea.isEmpty()) continue;
+            if (physicalArea.isEmpty())
+                continue;
 
             // 从原始截图裁剪该区域
             QPixmap sourcePart = screenPixmap.copy(physicalArea);
@@ -1090,13 +1097,13 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
             // 将物理像素大小的图像缩放回逻辑大小，避免放大
             // EffectPart 的大小是物理像素大小（physicalArea.size()）
             // 需要缩放回逻辑大小（logicalArea.size()）
-            if (EffectPart.size() != logicalArea.size()) {
+            if (EffectPart.size() != logicalArea.size())
+            {
                 EffectPart = EffectPart.scaled(
                     logicalArea.width(),
                     logicalArea.height(),
                     Qt::IgnoreAspectRatio,
-                    Qt::SmoothTransformation
-                );
+                    Qt::SmoothTransformation);
             }
             // 绘制回逻辑坐标位置
             painter.drawPixmap(logicalArea.topLeft(), EffectPart);
@@ -1112,22 +1119,23 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
             // 计算窗口偏移（与绘制选中区域时的逻辑保持一致）
             QPoint windowPos = geometry().topLeft();
             QPoint offset = windowPos - virtualGeometryTopLeft;
-            
+
             // 使用浮点数计算保持精度
             double physicalX = (currentEffectRect.x() + offset.x()) * devicePixelRatio;
             double physicalY = (currentEffectRect.y() + offset.y()) * devicePixelRatio;
             double physicalW = currentEffectRect.width() * devicePixelRatio;
             double physicalH = currentEffectRect.height() * devicePixelRatio;
-            
+
             QRect physicalRect(
                 qRound(physicalX),
                 qRound(physicalY),
                 qRound(physicalW),
                 qRound(physicalH));
-            
+
             // 确保物理区域在屏幕截图范围内
             physicalRect = physicalRect.intersected(screenPixmap.rect());
-            if (!physicalRect.isEmpty()) {
+            if (!physicalRect.isEmpty())
+            {
                 QPixmap sourcePart = screenPixmap.copy(physicalRect);
                 // 设置 devicePixelRatio 为 1.0，避免自动缩放
                 sourcePart.setDevicePixelRatio(1.0);
@@ -1136,13 +1144,13 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
                 // 确保 EffectPreview 的 devicePixelRatio 也是 1.0
                 EffectPreview.setDevicePixelRatio(1.0);
                 // 将物理像素大小的图像缩放回逻辑大小，避免放大
-                if (EffectPreview.size() != currentEffectRect.size()) {
+                if (EffectPreview.size() != currentEffectRect.size())
+                {
                     EffectPreview = EffectPreview.scaled(
                         currentEffectRect.width(),
                         currentEffectRect.height(),
                         Qt::IgnoreAspectRatio,
-                        Qt::SmoothTransformation
-                    );
+                        Qt::SmoothTransformation);
                 }
                 // 绘制预览
                 painter.drawPixmap(currentEffectRect.topLeft(), EffectPreview);
@@ -1241,7 +1249,7 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
             // 但如果只是单击修改属性（isTextInputActive = false），不隐藏文字
             if (editingTextIndex == i && isTextInputActive)
             {
-                continue;  // 跳过绘制正在编辑的文字
+                continue; // 跳过绘制正在编辑的文字
             }
             const DrawnText &text = texts[i];
             // 检查文字是否与截图框有重叠
@@ -1261,7 +1269,7 @@ void ScreenshotWidget::paintEvent(QPaintEvent *event)
             // 但如果只是单击修改属性（isTextInputActive = false），不隐藏文字
             if (editingTextIndex == i && isTextInputActive)
             {
-                continue;  // 跳过绘制正在编辑的文字
+                continue; // 跳过绘制正在编辑的文字
             }
             const DrawnText &text = texts[i];
             // 使用原始位置，不再添加额外偏移
@@ -1376,11 +1384,11 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
                     textClickStartPos = clickPos;
                     textClickIndex = i;
                     potentialTextDrag = true;
-                    textDoubleClicked = false;  // 重置双击标志
-                    
+                    textDoubleClicked = false; // 重置双击标志
+
                     // 准备拖拽（如果鼠标移动则拖拽，否则单击修改属性）
-                    isTextMoving = false;  // 先不开始拖拽，等待鼠标移动
-                    return;  // 直接返回，不处理其他逻辑
+                    isTextMoving = false; // 先不开始拖拽，等待鼠标移动
+                    return;               // 直接返回，不处理其他逻辑
                 }
             }
         }
@@ -1407,33 +1415,35 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
         }
 
         // 优先检查是否点击了调整手柄（四个角和四个边的中心点）- 只在 None 模式下允许调整
-        if (selected && !selectedRect.isEmpty() && currentDrawMode == None) {
+        if (selected && !selectedRect.isEmpty() && currentDrawMode == None)
+        {
             // 更新 startPoint 和 endPoint 为 selectedRect 的值，以便 mouseIsAdjust 能正确检测
             startPoint = selectedRect.topLeft();
             endPoint = selectedRect.bottomRight();
             // 先调用 mouseIsAdjust 来检测点击位置和设置方向、光标
             mouseIsAdjust(clickPos);
-            
+
             // 检查是否点击了调整手柄（四个角、四个边的中心点）
             bool isAdjustHandle = (m_adjectDirection == TopLeftCorner ||
-                                  m_adjectDirection == TopRightCorner ||
-                                  m_adjectDirection == LeftBottom ||
-                                  m_adjectDirection == RightBottom ||
-                                  m_adjectDirection == LeftCenterPoint ||
-                                  m_adjectDirection == RightCenterPoint ||
-                                  m_adjectDirection == TopCenterPoint ||
-                                  m_adjectDirection == BottomCenterPoint);
-            
+                                   m_adjectDirection == TopRightCorner ||
+                                   m_adjectDirection == LeftBottom ||
+                                   m_adjectDirection == RightBottom ||
+                                   m_adjectDirection == LeftCenterPoint ||
+                                   m_adjectDirection == RightCenterPoint ||
+                                   m_adjectDirection == TopCenterPoint ||
+                                   m_adjectDirection == BottomCenterPoint);
+
             // 检查是否点击了边缘或内部（用于移动整个矩形）
             // mouseIsAdjust 会在点击边缘或内部时设置 m_adjectDirection = MoveAll 和 cursor = SizeAllCursor
-            bool isMoveArea = (cursor().shape() == Qt::SizeAllCursor && 
-                              m_adjectDirection == MoveAll);
-            
+            bool isMoveArea = (cursor().shape() == Qt::SizeAllCursor &&
+                               m_adjectDirection == MoveAll);
+
             // 如果点击了调整手柄或移动区域，设置 m_isadjust = true
-            if (isAdjustHandle || isMoveArea) {
+            if (isAdjustHandle || isMoveArea)
+            {
                 m_isadjust = true;
                 // 保存鼠标相对于选中区域的偏移量，用于拖拽调整/移动
-                m_relativeDistance = QRect(clickPos.x() - selectedRect.left(), 
+                m_relativeDistance = QRect(clickPos.x() - selectedRect.left(),
                                            clickPos.y() - selectedRect.top(),
                                            selectedRect.width(),
                                            selectedRect.height());
@@ -1455,7 +1465,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
                 currentMousePos = clickPos;
                 selecting = true;
                 selected = false;
-                
+
                 // 清除之前的状态
                 if (toolbar)
                     toolbar->hide();
@@ -1467,7 +1477,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
                     fontToolbar->hide();
                 if (EffectToolbar)
                     EffectToolbar->hide();
-                
+
                 showMagnifier = true;
                 EffectAreas.clear();
                 EffectStrengths.clear();
@@ -1475,7 +1485,7 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
                 update();
                 return;
             }
-            
+
             // 没有点击文字，调用handleNoneMode
             handleNoneMode(clickPos);
             return;
@@ -1642,24 +1652,29 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
         // 检查鼠标是否移动超过阈值，如果是则开始拖拽
         QPoint moveDelta = event->pos() - textClickStartPos;
         int moveDistance = qAbs(moveDelta.x()) + qAbs(moveDelta.y());
-        
-        if (moveDistance > 5) {  // 移动超过5像素，认为是拖拽
+
+        if (moveDistance > 5)
+        { // 移动超过5像素，认为是拖拽
             // 开始拖拽文字
-            if (!isTextMoving) {
+            if (!isTextMoving)
+            {
                 isTextMoving = true;
                 movingText = &texts[textClickIndex];
                 dragStartOffset = event->pos() - texts[textClickIndex].rect.topLeft();
                 setCursor(Qt::ClosedHandCursor);
             }
-            
+
             // 拖拽移动文字：实时更新位置
             QPoint newPos = event->pos() - dragStartOffset;
 
             // 确保文字不会移出截图框边界（与画笔限制保持一致）
-            if (selected) {
+            if (selected)
+            {
                 newPos.setX(qMax(selectedRect.left(), qMin(selectedRect.right() - movingText->rect.width(), newPos.x())));
                 newPos.setY(qMax(selectedRect.top(), qMin(selectedRect.bottom() - movingText->rect.height(), newPos.y())));
-            } else {
+            }
+            else
+            {
                 // 未选中区域时，限制在屏幕边界
                 newPos.setX(qMax(0, qMin(width() - movingText->rect.width(), newPos.x())));
                 newPos.setY(qMax(0, qMin(height() - movingText->rect.height(), newPos.y())));
@@ -1668,7 +1683,7 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
             movingText->rect.moveTopLeft(newPos);
             movingText->position = newPos;
             update();
-            return;  // 拖拽时直接返回，不处理其他逻辑
+            return; // 拖拽时直接返回，不处理其他逻辑
         }
     }
     else if (isTextMoving && movingText)
@@ -1692,19 +1707,21 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
         movingText->rect.moveTopLeft(newPos);
         movingText->position = newPos;
         update();
-        return;  // 拖拽时直接返回，不处理其他逻辑
+        return; // 拖拽时直接返回，不处理其他逻辑
     }
-    else if (m_isadjust && selected) {
+    else if (m_isadjust && selected)
+    {
         // 调整选中区域大小
         QPoint currentPos = event->pos();
-        
+
         // 限制在窗口范围内
         currentPos.setX(qMax(0, qMin(width(), currentPos.x())));
         currentPos.setY(qMax(0, qMin(height(), currentPos.y())));
-        
+
         QRect newRect = selectedRect;
-        
-        switch (m_adjectDirection) {
+
+        switch (m_adjectDirection)
+        {
         case TopLeftCorner:
             newRect.setTopLeft(currentPos);
             break;
@@ -1730,28 +1747,34 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
             newRect.setBottom(currentPos.y());
             break;
         case MoveAll:
-            {
-                // m_relativeDistance 保存的是鼠标点击位置相对于选中区域左上角的偏移量
-                QPoint offset = currentPos - QPoint(m_relativeDistance.x(), m_relativeDistance.y());
-                newRect.moveTopLeft(offset);
-                // 确保不超出窗口边界
-                if (newRect.left() < 0) newRect.moveLeft(0);
-                if (newRect.top() < 0) newRect.moveTop(0);
-                if (newRect.right() > width()) newRect.moveRight(width());
-                if (newRect.bottom() > height()) newRect.moveBottom(height());
-            }
-            break;
+        {
+            // m_relativeDistance 保存的是鼠标点击位置相对于选中区域左上角的偏移量
+            QPoint offset = currentPos - QPoint(m_relativeDistance.x(), m_relativeDistance.y());
+            newRect.moveTopLeft(offset);
+            // 确保不超出窗口边界
+            if (newRect.left() < 0)
+                newRect.moveLeft(0);
+            if (newRect.top() < 0)
+                newRect.moveTop(0);
+            if (newRect.right() > width())
+                newRect.moveRight(width());
+            if (newRect.bottom() > height())
+                newRect.moveBottom(height());
+        }
+        break;
         default:
             break;
         }
-        
+
         // 确保矩形有效（宽度和高度至少为1）
-        if (newRect.width() > 0 && newRect.height() > 0) {
+        if (newRect.width() > 0 && newRect.height() > 0)
+        {
             selectedRect = newRect.normalized();
             // 限制更新频率，避免过度重绘导致卡顿
             static qint64 lastUpdateTime = 0;
             qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-            if (currentTime - lastUpdateTime > 16) { // 约60fps
+            if (currentTime - lastUpdateTime > 16)
+            { // 约60fps
                 update();
                 lastUpdateTime = currentTime;
             }
@@ -1800,12 +1823,15 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
         if (!overText)
         {
             // 检查是否在调整手柄上，使用 mouseIsAdjust 函数（只在 None 模式下）
-            if (selected && !selectedRect.isEmpty() && !m_isadjust && currentDrawMode == None) {
+            if (selected && !selectedRect.isEmpty() && !m_isadjust && currentDrawMode == None)
+            {
                 // 更新 startPoint 和 endPoint 以便 mouseIsAdjust 使用
                 startPoint = selectedRect.topLeft();
                 endPoint = selectedRect.bottomRight();
                 mouseIsAdjust(event->pos());
-            } else {
+            }
+            else
+            {
                 // 其他模式下使用默认光标
                 setCursor(Qt::CrossCursor);
             }
@@ -1903,39 +1929,42 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent *event)
         else if (potentialTextDrag && textClickIndex >= 0 && textClickIndex < texts.size())
         {
             // 如果发生了双击，不处理单击
-            if (textDoubleClicked) {
+            if (textDoubleClicked)
+            {
                 potentialTextDrag = false;
                 textClickIndex = -1;
                 textDoubleClicked = false;
                 return;
             }
-            
+
             // 如果点击了文字但没有拖拽（移动距离小于阈值），则修改属性
             QPoint moveDelta = event->pos() - textClickStartPos;
             int moveDistance = qAbs(moveDelta.x()) + qAbs(moveDelta.y());
-            
-            if (moveDistance <= 5) {  // 没有移动或移动很小，认为是单击
+
+            if (moveDistance <= 5)
+            { // 没有移动或移动很小，认为是单击
                 // 保存当前值，用于定时器回调
                 int savedTextIndex = textClickIndex;
-                
+
                 // 使用定时器延迟处理单击，以便区分双击
-                QTimer::singleShot(QApplication::doubleClickInterval(), this, [this, savedTextIndex]() {
+                QTimer::singleShot(QApplication::doubleClickInterval(), this, [this, savedTextIndex]()
+                                   {
                     // 检查是否发生了双击（如果发生了双击，textDoubleClicked会被设置为true）
                     if (!textDoubleClicked && savedTextIndex >= 0 && savedTextIndex < texts.size()) {
                         // 单击文字：修改属性（颜色、大小、字体）
                         selectTextForPropertyEdit(savedTextIndex);
                     }
                     // 重置双击标志（无论是否处理了单击）
-                    textDoubleClicked = false;
-                });
+                    textDoubleClicked = false; });
             }
-            
+
             // 重置状态
             potentialTextDrag = false;
             textClickIndex = -1;
-            return;  // 直接返回，不处理区域选择逻辑
+            return; // 直接返回，不处理区域选择逻辑
         }
-        else if (m_isadjust && selected) {
+        else if (m_isadjust && selected)
+        {
             // 结束调整（只有在调整选中区域时才结束）
             m_isadjust = false;
             // 确保 selectedRect 已更新（mouseMoveEvent 中已更新）
@@ -1985,13 +2014,13 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent *event)
             {
                 updateToolbarPosition();
                 toolbar->show();
-                
+
                 // 自动检测并打码人脸（延迟执行，避免阻塞UI）
 #ifndef NO_OPENCV
-                if (autoFaceBlurEnabled) {
-                    QTimer::singleShot(100, this, [this]() {
-                        autoDetectAndBlurFaces();
-                    });
+                if (autoFaceBlurEnabled)
+                {
+                    QTimer::singleShot(100, this, [this]()
+                                       { autoDetectAndBlurFaces(); });
                 }
 #endif
             }
@@ -2194,14 +2223,15 @@ void ScreenshotWidget::updateToolbarPosition()
         updateEffectToolbarPosition();
 }
 
-void ScreenshotWidget::saveScreenshot()
+// 通用截图处理函数，使用回调函数处理最终输出
+void ScreenshotWidget::processScreenshot(std::function<void(QPixmap &)> outputHandler)
 {
     if (selectedRect.isEmpty())
     {
         return;
     }
 
-    qDebug() << "=== Save Screenshot Debug Info ===";
+    qDebug() << "=== Process Screenshot Debug Info ===";
     qDebug() << "Device Pixel Ratio:" << devicePixelRatio;
     qDebug() << "Selected Rect (Logical):" << selectedRect;
     qDebug() << "Screen Pixmap Size:" << screenPixmap.size();
@@ -2286,7 +2316,7 @@ void ScreenshotWidget::saveScreenshot()
         // 如果正在编辑这个文字的内容（双击编辑，显示输入框），跳过绘制（隐藏原文字，只显示输入框）
         if (editingTextIndex == i && isTextInputActive)
         {
-            continue;  // 跳过绘制正在编辑的文字
+            continue; // 跳过绘制正在编辑的文字
         }
         QPoint adjustedPosition(
             (text.position.x() - selectedRect.x()) * devicePixelRatio,
@@ -2318,7 +2348,7 @@ void ScreenshotWidget::saveScreenshot()
     }
 
     painter.end();
-    // 应用马赛克效果（使用各自保存的强度）
+    // 应用马赛克/模糊效果（使用各自保存的强度）
     if (!EffectAreas.isEmpty())
     {
         QPixmap processedPixmap = croppedPixmap;
@@ -2399,193 +2429,64 @@ void ScreenshotWidget::saveScreenshot()
         qDebug() << getText("watermark_not_set", "未设置水印内容");
     }
 #endif
-    // 获取默认保存路径
-    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
-    QString defaultFileName = defaultPath + "/screenshot_" +
-                              QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".png";
 
-    // 打开保存对话框
-    QString fileName = QFileDialog::getSaveFileName(this,
-                                                    getText("save_screenshot", "保存截图"),
-                                                    defaultFileName,
-                                                    getText("file_filter", "PNG图片 (*.png);;JPEG图片 (*.jpg);;所有文件 (*.*)"));
+    // 调用回调函数处理最终输出（保存或复制）
+    outputHandler(croppedPixmap);
 
-    if (!fileName.isEmpty())
-    {
-        // 根据文件扩展名确定保存格式
-        QString suffix = QFileInfo(fileName).suffix().toLower();
-        if (suffix != "png" && suffix != "jpg" && suffix != "jpeg")
-        {
-            fileName += ".png"; // 默认使用 PNG
-            suffix = "png";
-        }
-
-        // 保存图片
-        if (suffix == "png")
-        {
-            croppedPixmap.save(fileName, "PNG", 100);
-        }
-        else if (suffix == "jpg" || suffix == "jpeg")
-        {
-            croppedPixmap.save(fileName, "JPEG", 95);
-        }
-        emit screenshotTaken(); // 发射截图完成信号
-        hide();                 // 隐藏当前窗口
-        // QApplication::quit();   // 退出整个应用程序
-        // 如果用户取消保存，不做任何操作，保持当前状态（工具栏仍然可见）
-        if (mainWindow)
-        {
-            mainWindow->show();
-        }
-        close();
-    }
-}
-
-void ScreenshotWidget::copyToClipboard()
-{
-    if (selectedRect.isEmpty())
-    {
-        return;
-    }
-
-    qDebug() << "=== Copy to Clipboard Debug Info ===";
-    qDebug() << "Device Pixel Ratio:" << devicePixelRatio;
-
-    // 从原始截图中裁剪选中区域
-    // screenPixmap中存储的是物理像素，需要将逻辑坐标转换为物理坐标
-    int x = qRound(selectedRect.x() * devicePixelRatio);
-    int y = qRound(selectedRect.y() * devicePixelRatio);
-    int w = qRound(selectedRect.width() * devicePixelRatio);
-    int h = qRound(selectedRect.height() * devicePixelRatio);
-
-    QRect physicalRect(x, y, w, h);
-
-    // 从原始像素数据中裁剪
-    QImage tempImage = screenPixmap.toImage();
-    QImage croppedImage = tempImage.copy(physicalRect);
-    QPixmap croppedPixmap = QPixmap::fromImage(croppedImage);
-
-    // 强制将 DPR 设置为 1.0，以便我们直接在物理像素上进行绘制
-    // 这样可以避免 QPainter 自动应用 DPR 导致的双重缩放
-    croppedPixmap.setDevicePixelRatio(1.0);
-
-    // 在裁剪后的图片上绘制箭头和矩形
-    QPainter painter(&croppedPixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    // 绘制所有箭头（需要调整坐标到裁剪区域）
-    for (const DrawnArrow &arrow : arrows)
-    {
-        // 计算相对于选中区域左上角的逻辑坐标
-        QPointF relativeStart = arrow.start - selectedRect.topLeft();
-        QPointF relativeEnd = arrow.end - selectedRect.topLeft();
-
-        // 转换为物理坐标
-        QPointF adjustedStart = relativeStart * devicePixelRatio;
-        QPointF adjustedEnd = relativeEnd * devicePixelRatio;
-
-        drawArrow(painter, adjustedStart, adjustedEnd, arrow.color, arrow.width * devicePixelRatio, devicePixelRatio);
-    }
-
-    // 绘制所有矩形
-    for (const DrawnRectangle &rect : rectangles)
-    {
-        QRectF adjustedRect(
-            (rect.rect.x() - selectedRect.x()) * devicePixelRatio,
-            (rect.rect.y() - selectedRect.y()) * devicePixelRatio,
-            rect.rect.width() * devicePixelRatio,
-            rect.rect.height() * devicePixelRatio);
-        painter.setPen(QPen(rect.color, rect.width * devicePixelRatio));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawRect(adjustedRect);
-    }
-    // 绘制所有椭圆
-    for (const DrawnEllipse &ellipse : ellipses)
-    {
-        QRectF adjustedRect(
-            (ellipse.rect.x() - selectedRect.x()) * devicePixelRatio,
-            (ellipse.rect.y() - selectedRect.y()) * devicePixelRatio,
-            ellipse.rect.width() * devicePixelRatio,
-            ellipse.rect.height() * devicePixelRatio);
-        painter.setPen(QPen(ellipse.color, ellipse.width * devicePixelRatio));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawRect(adjustedRect);
-    }
-
-    // 绘制文本
-    for (int i = 0; i < texts.size(); ++i)
-    {
-        const DrawnText &text = texts[i];
-        // 如果正在编辑这个文字的内容（双击编辑，显示输入框），跳过绘制（隐藏原文字，只显示输入框）
-        if (editingTextIndex == i && isTextInputActive)
-        {
-            continue;  // 跳过绘制正在编辑的文字
-        }
-        QPoint adjustedPosition(
-            (text.position.x() - selectedRect.x()) * devicePixelRatio,
-            (text.position.y() - selectedRect.y()) * devicePixelRatio);
-
-        // 绘制文字
-        drawText(painter, adjustedPosition + QPoint(5, text.fontSize + 5),
-                 text.text, text.color, text.font);
-    }
-
-    // 绘制画笔轨迹
-    for (const DrawnPenStroke &stroke : penStrokes)
-    {
-        if (stroke.points.size() < 2)
-            continue;
-
-        QPen pen(stroke.color, stroke.width * devicePixelRatio);
-        pen.setCapStyle(Qt::RoundCap);
-        pen.setJoinStyle(Qt::RoundJoin);
-        painter.setPen(pen);
-        painter.setRenderHint(QPainter::Antialiasing);
-
-        for (int i = 1; i < stroke.points.size(); i++)
-        {
-            QPointF start = (stroke.points[i - 1] - selectedRect.topLeft()) * devicePixelRatio;
-            QPointF end = (stroke.points[i] - selectedRect.topLeft()) * devicePixelRatio;
-            painter.drawLine(start, end);
-        }
-    }
-
-    painter.end();
-
-    // 应用模糊效果（如果有模糊区域）
-    if (!EffectAreas.isEmpty())
-    {
-        QPixmap processedPixmap = croppedPixmap;
-
-        for (int i = 0; i < EffectAreas.size(); ++i)
-        {
-            const QRect &EffectArea = EffectAreas[i];
-            int strength = EffectStrengths[i]; // 使用保存的强度值
-            DrawMode mode = effectTypes[i];    // 使用保存的效果类型
-
-            QRect relativeEffectArea = EffectArea.translated(-selectedRect.topLeft());
-            relativeEffectArea = QRect(
-                relativeEffectArea.x() * devicePixelRatio,
-                relativeEffectArea.y() * devicePixelRatio,
-                relativeEffectArea.width() * devicePixelRatio,
-                relativeEffectArea.height() * devicePixelRatio);
-
-            processedPixmap = applyEffect(processedPixmap, relativeEffectArea, strength, mode);
-        }
-        croppedPixmap = processedPixmap;
-    }
-    // 复制到剪贴板
-    QClipboard *clipboard = QGuiApplication::clipboard();
-    clipboard->setPixmap(croppedPixmap);
-
+    // 通用的收尾工作
     emit screenshotTaken();
     hide();
-    // QApplication::quit();
     if (mainWindow)
     {
         mainWindow->show();
     }
     close();
+}
+
+void ScreenshotWidget::saveScreenshot()
+{
+    processScreenshot([this](QPixmap &pixmap)
+                      {
+        // 获取默认保存路径
+        QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+        QString defaultFileName = defaultPath + "/screenshot_" +
+                                  QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss") + ".png";
+
+        // 打开保存对话框
+        QString fileName = QFileDialog::getSaveFileName(this,
+                                                        getText("save_screenshot", "保存截图"),
+                                                        defaultFileName,
+                                                        getText("file_filter", "PNG图片 (*.png);;JPEG图片 (*.jpg);;所有文件 (*.*)"));
+
+        if (!fileName.isEmpty())
+        {
+            // 根据文件扩展名确定保存格式
+            QString suffix = QFileInfo(fileName).suffix().toLower();
+            if (suffix != "png" && suffix != "jpg" && suffix != "jpeg")
+            {
+                fileName += ".png"; // 默认使用 PNG
+                suffix = "png";
+            }
+
+            // 保存图片
+            if (suffix == "png")
+            {
+                pixmap.save(fileName, "PNG", 100);
+            }
+            else if (suffix == "jpg" || suffix == "jpeg")
+            {
+                pixmap.save(fileName, "JPEG", 95);
+            }
+        } });
+}
+
+void ScreenshotWidget::copyToClipboard()
+{
+    processScreenshot([](QPixmap &pixmap)
+                      {
+        // 复制到剪贴板
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        clipboard->setPixmap(pixmap); });
 }
 
 void ScreenshotWidget::drawArrow(QPainter &painter, const QPointF &start, const QPointF &end, const QColor &color, int width, double scale)
@@ -2796,9 +2697,10 @@ void ScreenshotWidget::onFontSizeInputChanged()
             currentTextFont.setPixelSize(currentFontSize);
             updateFontToolbar(); // 确保显示的是正确值
             updateTextInputStyle();
-            
+
             // 如果单击选择了文字（editingTextIndex >= 0 但 isTextInputActive = false），立即保存属性
-            if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size()) {
+            if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size())
+            {
                 saveTextProperties();
             }
         }
@@ -2842,9 +2744,10 @@ void ScreenshotWidget::onTextColorClicked()
             // 更新当前编辑的文本样式并重新计算大小
             updateTextInputSize();
         }
-        
+
         // 如果单击选择了文字（editingTextIndex >= 0 但 isTextInputActive = false），立即保存属性
-        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size()) {
+        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size())
+        {
             saveTextProperties();
         }
 
@@ -2871,9 +2774,10 @@ void ScreenshotWidget::increaseFontSize()
             // 更新当前编辑的文本样式并重新计算大小
             updateTextInputSize();
         }
-        
+
         // 如果单击选择了文字（editingTextIndex >= 0 但 isTextInputActive = false），立即保存属性
-        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size()) {
+        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size())
+        {
             saveTextProperties();
         }
 
@@ -2900,9 +2804,10 @@ void ScreenshotWidget::decreaseFontSize()
             // 更新当前编辑的文本样式并重新计算大小
             updateTextInputSize();
         }
-        
+
         // 如果单击选择了文字（editingTextIndex >= 0 但 isTextInputActive = false），立即保存属性
-        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size()) {
+        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size())
+        {
             saveTextProperties();
         }
 
@@ -2920,11 +2825,13 @@ void ScreenshotWidget::onFontFamilyClicked()
         currentTextFont = font;
         // 优先使用 pixelSize，如果为 -1 则使用 pointSize 转换
         int pixelSize = font.pixelSize();
-        if (pixelSize == -1) {
+        if (pixelSize == -1)
+        {
             // 如果使用 point size，转换为 pixel size（假设 96 DPI）
             pixelSize = font.pointSize() * 96 / 72;
         }
-        if (pixelSize > 0) {
+        if (pixelSize > 0)
+        {
             currentFontSize = pixelSize;
             currentTextFont.setPixelSize(currentFontSize);
         }
@@ -2938,9 +2845,10 @@ void ScreenshotWidget::onFontFamilyClicked()
             // 更新当前编辑的文本样式并重新计算大小
             updateTextInputSize();
         }
-        
+
         // 如果单击选择了文字（editingTextIndex >= 0 但 isTextInputActive = false），立即保存属性
-        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size()) {
+        if (!isTextInputActive && editingTextIndex >= 0 && editingTextIndex < texts.size())
+        {
             saveTextProperties();
         }
 
@@ -3158,7 +3066,7 @@ void ScreenshotWidget::mouseDoubleClickEvent(QMouseEvent *event)
                 textDoubleClicked = true;
                 potentialTextDrag = false;
                 textClickIndex = -1;
-                
+
                 // 双击编辑现有文字
                 editExistingText(i);
                 break;
@@ -3192,7 +3100,7 @@ void ScreenshotWidget::editExistingText(int textIndex)
         textInput->show();
         textInput->setFocus();
         textInput->selectAll();
-        
+
         // 设置文本输入激活标志（必须在 editingTextIndex 之后）
         isTextInputActive = true;
 
@@ -3207,16 +3115,17 @@ void ScreenshotWidget::editExistingText(int textIndex)
 
         // 强制重绘，隐藏原文字
         update();
-        repaint();  // 立即重绘，确保文字被隐藏
+        repaint(); // 立即重绘，确保文字被隐藏
     }
 }
 
 // 单击文字时修改属性（颜色、大小、字体）
 void ScreenshotWidget::selectTextForPropertyEdit(int textIndex)
 {
-    if (textIndex < 0 || textIndex >= texts.size()) return;
+    if (textIndex < 0 || textIndex >= texts.size())
+        return;
 
-    DrawnText& text = texts[textIndex];
+    DrawnText &text = texts[textIndex];
 
     // 切换到文本模式
     currentDrawMode = Text;
@@ -3232,13 +3141,15 @@ void ScreenshotWidget::selectTextForPropertyEdit(int textIndex)
     currentTextFont.setPixelSize(currentFontSize);
 
     // 不显示输入框，只显示字体工具栏用于修改属性
-    if (textInput) {
+    if (textInput)
+    {
         textInput->hide();
     }
     isTextInputActive = false;
 
     // 显示字体工具栏
-    if (fontToolbar) {
+    if (fontToolbar)
+    {
         updateFontToolbar();
         updateFontToolbarPosition();
         fontToolbar->show();
@@ -3251,30 +3162,31 @@ void ScreenshotWidget::selectTextForPropertyEdit(int textIndex)
 // 保存文字属性（不修改文本内容）
 void ScreenshotWidget::saveTextProperties()
 {
-    if (editingTextIndex < 0 || editingTextIndex >= texts.size()) {
+    if (editingTextIndex < 0 || editingTextIndex >= texts.size())
+    {
         return;
     }
-    
-    DrawnText& existingText = texts[editingTextIndex];
-    
+
+    DrawnText &existingText = texts[editingTextIndex];
+
     // 保存新的属性
     existingText.color = currentTextColor;
     existingText.fontSize = currentFontSize;
     QFont fontToSave = currentTextFont;
     fontToSave.setPixelSize(currentFontSize);
     existingText.font = fontToSave;
-    
+
     // 重新计算文字矩形大小（因为字体大小可能改变）
     QFontMetrics metrics(existingText.font);
     QRect textRect = metrics.boundingRect(existingText.text);
     textRect.moveTopLeft(existingText.position);
     textRect.adjust(-2, -2, 2, 2);
     existingText.rect = textRect;
-    
-    qDebug() << "保存文字属性 - 颜色:" << existingText.color.name() 
+
+    qDebug() << "保存文字属性 - 颜色:" << existingText.color.name()
              << "大小:" << existingText.fontSize
              << "编辑索引:" << editingTextIndex;
-    
+
     update();
 }
 
@@ -3388,78 +3300,84 @@ void ScreenshotWidget::captureWindow(QPoint mousePos)
 void ScreenshotWidget::autoDetectAndBlurFaces()
 {
 #ifndef NO_OPENCV
-    if (!selected || selectedRect.isEmpty()) {
+    if (!selected || selectedRect.isEmpty())
+    {
         qDebug() << "未选中区域，无法进行人脸检测";
         return;
     }
-    
+
     // 检查人脸检测器是否可用
-    if (!faceDetector) {
+    if (!faceDetector)
+    {
         qDebug() << "错误：人脸检测器指针为空";
         return;
     }
-    
-    if (!faceDetector->isReady()) {
+
+    if (!faceDetector->isReady())
+    {
         qDebug() << "人脸检测器未初始化，尝试重新初始化...";
-        if (!faceDetector->initialize()) {
+        if (!faceDetector->initialize())
+        {
             qDebug() << "人脸检测器初始化失败，跳过自动打码";
-            QMessageBox::critical(this, 
-                getText("face_blur_error_title", "错误"), 
-                getText("face_blur_init_failed", "人脸检测器初始化失败\n\n可能的原因：\n1. 模型文件缺失（opencv_face_detector_uint8.pb 和 opencv_face_detector.pbtxt.txt）\n2. OpenCV 库未正确配置\n\n请检查 models 目录下是否有模型文件"));
+            QMessageBox::critical(this,
+                                  getText("face_blur_error_title", "错误"),
+                                  getText("face_blur_init_failed", "人脸检测器初始化失败\n\n可能的原因：\n1. 模型文件缺失（opencv_face_detector_uint8.pb 和 opencv_face_detector.pbtxt.txt）\n2. OpenCV 库未正确配置\n\n请检查 models 目录下是否有模型文件"));
             return;
         }
-        if (!faceDetector->isReady()) {
+        if (!faceDetector->isReady())
+        {
             qDebug() << "人脸检测器初始化后仍不可用，跳过自动打码";
-            QMessageBox::critical(this, 
-                getText("face_blur_error_title", "错误"), 
-                getText("face_blur_not_ready", "人脸检测器初始化后仍不可用\n\n请检查：\n1. 模型文件是否完整\n2. OpenCV 库是否正确安装"));
+            QMessageBox::critical(this,
+                                  getText("face_blur_error_title", "错误"),
+                                  getText("face_blur_not_ready", "人脸检测器初始化后仍不可用\n\n请检查：\n1. 模型文件是否完整\n2. OpenCV 库是否正确安装"));
             return;
         }
         qDebug() << "人脸检测器重新初始化成功";
     }
-    
+
     qDebug() << "开始自动人脸检测，选中区域:" << selectedRect;
-    
+
     // 从选中的区域提取图像（物理坐标）
     // 将窗口坐标转换为截图坐标（考虑虚拟桌面偏移，与paintEvent中的逻辑保持一致）
     QPoint windowPos = geometry().topLeft();
     QPoint offset = windowPos - virtualGeometryTopLeft;
-    
+
     // 使用浮点数计算保持精度，避免多次舍入导致的累积误差
     double physicalX = (selectedRect.x() + offset.x()) * devicePixelRatio;
     double physicalY = (selectedRect.y() + offset.y()) * devicePixelRatio;
     double physicalW = selectedRect.width() * devicePixelRatio;
     double physicalH = selectedRect.height() * devicePixelRatio;
-    
+
     QRect physicalRect(
         qRound(physicalX),
         qRound(physicalY),
         qRound(physicalW),
-        qRound(physicalH)
-    );
-    
+        qRound(physicalH));
+
     // 确保物理矩形在屏幕截图范围内
     physicalRect = physicalRect.intersected(screenPixmap.rect());
-    
-    if (physicalRect.isEmpty()) {
+
+    if (physicalRect.isEmpty())
+    {
         qDebug() << "物理矩形为空，无法提取图像";
         return;
     }
-    
+
     QPixmap selectedPixmap = screenPixmap.copy(physicalRect);
-    
+
     // 性能优化：如果图像太大，先缩放再检测（提高速度）
     // 提高最大检测尺寸以提高精度
     QPixmap detectionPixmap = selectedPixmap;
     double scaleFactor = 1.0;
     int maxDetectionSize = 3840; // 进一步提高到3840（4K分辨率），使用更高分辨率检测以提高精度
-    
-    if (selectedPixmap.width() > maxDetectionSize || selectedPixmap.height() > maxDetectionSize) {
+
+    if (selectedPixmap.width() > maxDetectionSize || selectedPixmap.height() > maxDetectionSize)
+    {
         // 计算缩放比例，保持宽高比
         double widthScale = (double)maxDetectionSize / selectedPixmap.width();
         double heightScale = (double)maxDetectionSize / selectedPixmap.height();
         scaleFactor = qMin(widthScale, heightScale);
-        
+
         // 使用浮点数计算保持精度
         double scaledWidth = selectedPixmap.width() * scaleFactor;
         double scaledHeight = selectedPixmap.height() * scaleFactor;
@@ -3467,20 +3385,22 @@ void ScreenshotWidget::autoDetectAndBlurFaces()
         int finalWidth = qRound(scaledWidth);
         int finalHeight = qRound(scaledHeight);
         // 使用高质量缩放算法，提高检测精度
-        detectionPixmap = selectedPixmap.scaled(finalWidth, finalHeight, 
-                                                Qt::KeepAspectRatio, 
+        detectionPixmap = selectedPixmap.scaled(finalWidth, finalHeight,
+                                                Qt::KeepAspectRatio,
                                                 Qt::SmoothTransformation);
-        qDebug() << "图像过大，缩放检测:" << selectedPixmap.size() << "->" << detectionPixmap.size() 
+        qDebug() << "图像过大，缩放检测:" << selectedPixmap.size() << "->" << detectionPixmap.size()
                  << "缩放因子:" << scaleFactor;
     }
-    
+
     // 使用 FaceDetector 检测人脸（在缩放后的图像上）
     QList<QRect> detectedFaces = faceDetector->detectFaces(detectionPixmap);
-    
+
     // 如果进行了缩放，需要将检测结果坐标还原
     // 使用更精确的浮点数计算，减少精度丢失
-    if (scaleFactor < 1.0) {
-        for (QRect& face : detectedFaces) {
+    if (scaleFactor < 1.0)
+    {
+        for (QRect &face : detectedFaces)
+        {
             // 使用浮点数计算，保持精度
             double x = face.x() / scaleFactor;
             double y = face.y() / scaleFactor;
@@ -3493,94 +3413,103 @@ void ScreenshotWidget::autoDetectAndBlurFaces()
             face.setHeight(qRound(h));
         }
     }
-    
-    if (detectedFaces.isEmpty()) {
+
+    if (detectedFaces.isEmpty())
+    {
         qDebug() << "未检测到人脸，检测图像尺寸:" << detectionPixmap.size();
         return;
     }
-    
+
     qDebug() << "检测到" << detectedFaces.size() << "个人脸，开始应用打码";
-    
+
     // 将检测到的人脸区域转换为逻辑坐标，并添加到EffectAreas
     // offset已在函数开始时计算，直接使用
-    for (const QRect& faceRect : detectedFaces) {
+    for (const QRect &faceRect : detectedFaces)
+    {
         // faceRect是相对于selectedPixmap的坐标（物理坐标）
         // selectedPixmap是从screenPixmap的physicalRect位置提取的
         // physicalRect = (selectedRect.x() + offset.x()) * devicePixelRatio, ...
         // 所以faceRect的坐标是相对于physicalRect的物理像素坐标
         // 需要转换为窗口逻辑坐标（EffectAreas中存储的是窗口逻辑坐标）
-        
+
         // 1. 先转换为逻辑坐标（相对于physicalRect的逻辑坐标）
         // 使用浮点数计算保持精度，避免多次舍入导致的累积误差
         double logicalX = faceRect.x() / devicePixelRatio;
         double logicalY = faceRect.y() / devicePixelRatio;
         double logicalW = faceRect.width() / devicePixelRatio;
         double logicalH = faceRect.height() / devicePixelRatio;
-        
+
         // 2. 转换为窗口逻辑坐标
         // physicalRect的逻辑坐标是 (selectedRect.x() + offset.x(), selectedRect.y() + offset.y())
         // 所以需要加上这个偏移量
         double windowX = logicalX + selectedRect.x() + offset.x();
         double windowY = logicalY + selectedRect.y() + offset.y();
-        
+
         // 只在最后一步进行四舍五入，减少精度丢失
         QRect logicalFaceRect(
             qRound(windowX),
             qRound(windowY),
             qRound(logicalW),
-            qRound(logicalH)
-        );
-        
+            qRound(logicalH));
+
         // 3. 确保在选中区域内
         logicalFaceRect = logicalFaceRect.intersected(selectedRect);
-        
-        if (!logicalFaceRect.isEmpty()) {
+
+        if (!logicalFaceRect.isEmpty())
+        {
             // 再次验证检测框是否符合人脸特征（在逻辑坐标下）
             // 宽高比验证：人脸通常是接近正方形的
             double aspectRatio = (double)logicalFaceRect.width() / logicalFaceRect.height();
-            if (aspectRatio < 0.4 || aspectRatio > 2.5) {
-                qDebug() << "过滤掉宽高比异常的人脸检测框:" << logicalFaceRect 
+            if (aspectRatio < 0.4 || aspectRatio > 2.5)
+            {
+                qDebug() << "过滤掉宽高比异常的人脸检测框:" << logicalFaceRect
                          << "宽高比:" << aspectRatio;
-                continue;  // 宽高比异常，可能是误检（如文字、矩形框等）
+                continue; // 宽高比异常，可能是误检（如文字、矩形框等）
             }
-            
+
             // 添加较小的边距，确保完全覆盖人脸边缘，但避免覆盖文字
             // 策略：主要在垂直方向（上下）添加边距，水平方向（左右）使用更小的边距
             // 因为文字通常在身份证、证件等场景中位于人脸左右两侧
             int faceSize = qMax(logicalFaceRect.width(), logicalFaceRect.height());
             double marginRatioX, marginRatioY;
-            
-            if (faceSize < 50) {
+
+            if (faceSize < 50)
+            {
                 // 小人脸：水平方向3%，垂直方向5%
                 marginRatioX = 0.03;
                 marginRatioY = 0.05;
-            } else if (faceSize < 100) {
+            }
+            else if (faceSize < 100)
+            {
                 // 中等大小人脸：水平方向5%，垂直方向8%
                 marginRatioX = 0.05;
                 marginRatioY = 0.08;
-            } else {
+            }
+            else
+            {
                 // 大人脸：水平方向8%，垂直方向10%（最多，避免过大）
                 marginRatioX = 0.08;
                 marginRatioY = 0.10;
             }
-            
+
             // 使用浮点数计算保持精度
             double marginX = logicalFaceRect.width() * marginRatioX;
             double marginY = logicalFaceRect.height() * marginRatioY;
             // 只在最后一步进行四舍五入
-            logicalFaceRect.adjust(-qRound(marginX), -qRound(marginY), 
-                                    qRound(marginX), qRound(marginY));
-            
+            logicalFaceRect.adjust(-qRound(marginX), -qRound(marginY),
+                                   qRound(marginX), qRound(marginY));
+
             // 再次确保在选中区域内
             logicalFaceRect = logicalFaceRect.intersected(selectedRect);
-            
-            if (!logicalFaceRect.isEmpty() && logicalFaceRect.width() > 5 && logicalFaceRect.height() > 5) {
+
+            if (!logicalFaceRect.isEmpty() && logicalFaceRect.width() > 5 && logicalFaceRect.height() > 5)
+            {
                 // 添加到效果区域列表
                 EffectAreas.append(logicalFaceRect);
-                EffectStrengths.append(20);  // 使用默认强度（模糊半径）
-                effectTypes.append(Blur);     // 使用模糊效果（也可以改为Mosaic）
-                
-                qDebug() << "添加人脸打码区域:" << logicalFaceRect 
+                EffectStrengths.append(20); // 使用默认强度（模糊半径）
+                effectTypes.append(Blur);   // 使用模糊效果（也可以改为Mosaic）
+
+                qDebug() << "添加人脸打码区域:" << logicalFaceRect
                          << "原始检测坐标:" << faceRect
                          << "人脸大小:" << faceSize
                          << "水平边距比例:" << marginRatioX
@@ -3591,9 +3520,9 @@ void ScreenshotWidget::autoDetectAndBlurFaces()
             }
         }
     }
-    
+
     qDebug() << "自动人脸打码完成，共添加" << detectedFaces.size() << "个打码区域";
-    
+
     // 触发重绘
     update();
 #else
@@ -3805,17 +3734,18 @@ void ScreenshotWidget::mouseIsAdjust(QPoint mousePos)
 {
     // 使用 selectedRect 的坐标（如果已选择区域），否则使用 startPoint 和 endPoint
     QRect rect = selected ? selectedRect : QRect(startPoint, endPoint).normalized();
-    if (rect.isEmpty()) {
+    if (rect.isEmpty())
+    {
         setCursor(Qt::CrossCursor);
         return;
     }
-    
+
     // 为了兼容用户代码逻辑，使用 startPoint 和 endPoint
     QPoint topLeft = rect.topLeft();
     QPoint topRight = rect.topRight();
     QPoint bottomLeft = rect.bottomLeft();
     QPoint bottomRight = rect.bottomRight();
-    
+
     // 调整过程中的光标更新在 mouseMoveEvent 中处理，这里只处理检测阶段
     if (!m_isadjust)
     {
@@ -4262,7 +4192,8 @@ void ScreenshotWidget::performOCR()
     loadingMsg->show();
 
     // 异步调用 OCR
-    OcrManager::recognizeAsync(capture, [this, backend, loadingMsg](const QString &text) {
+    OcrManager::recognizeAsync(capture, [this, backend, loadingMsg](const QString &text)
+                               {
         // 确保所有UI操作在主线程中执行
         QMetaObject::invokeMethod(this, [this, text, backend, loadingMsg]() {
             // 关闭正在识别的提示
@@ -4286,8 +4217,7 @@ void ScreenshotWidget::performOCR()
                 QString errorMsg = text.isEmpty() ? getText("ocr_no_text", "未能识别到文字。") : text;
                 QMessageBox::warning(this, getText("ocr_failed_title", "OCR 失败"), errorMsg);
             }
-        }, Qt::QueuedConnection);
-    });
+        }, Qt::QueuedConnection); });
 }
 
 // 图片生成文字描述
