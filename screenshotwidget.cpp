@@ -1408,8 +1408,6 @@ void ScreenshotWidget::mousePressEvent(QMouseEvent *event)
             return;
         }
 
-
-
         // 处理文字编辑模式（None模式下的其他操作）
         if (selected && currentDrawMode == None)
         {
@@ -1635,8 +1633,9 @@ void ScreenshotWidget::mouseMoveEvent(QMouseEvent *event)
     }
     else if (!selected && m_isadjust && selecting)
     {
-        if(cursor().shape() != Qt::CrossCursor){
-            //更新坐标
+        if (cursor().shape() != Qt::CrossCursor)
+        {
+            // 更新坐标
             mouseIsAdjust(event->pos());
         }
         showMagnifier = true;
@@ -1832,10 +1831,12 @@ void ScreenshotWidget::mouseReleaseEvent(QMouseEvent *event)
             selected = false;
             showMagnifier = false;
             // 关闭调节
-            if(m_isadjust || m_selectedWindow){
-                if(m_isadjust){
+            if (m_isadjust || m_selectedWindow)
+            {
+                if (m_isadjust)
+                {
                     m_isadjust = false;
-                    selectedRect = QRect(startPoint,endPoint).normalized();
+                    selectedRect = QRect(startPoint, endPoint).normalized();
                 }
                 if (m_selectedWindow && (startPoint.x() == endPoint.x()) && (startPoint.y() == endPoint.y()))
                 {
@@ -2284,14 +2285,15 @@ void ScreenshotWidget::processScreenshot(std::function<void(QPixmap &)> outputHa
     // 调用回调函数处理最终输出（保存或复制）
     outputHandler(croppedPixmap);
 
-    // 通用的收尾工作
-    emit screenshotTaken();
-    hide();
-    if (mainWindow)
-    {
-        mainWindow->show();
-    }
-    close();
+    // 就不进行收尾了，因为从产品用户的角度，在取消保存或者复制之后可能还想要操作
+    // // 通用的收尾工作
+    // // emit screenshotTaken();
+    // // hide();
+    // // if (mainWindow)
+    // // {
+    // //     mainWindow->show();
+    // // }
+    // // close();
 }
 
 void ScreenshotWidget::saveScreenshot()
@@ -2320,24 +2322,44 @@ void ScreenshotWidget::saveScreenshot()
             }
 
             // 保存图片
+            bool saveSuccess = false;
             if (suffix == "png")
             {
-                pixmap.save(fileName, "PNG", 100);
+                saveSuccess = pixmap.save(fileName, "PNG", 100);
             }
             else if (suffix == "jpg" || suffix == "jpeg")
             {
-                pixmap.save(fileName, "JPEG", 95);
+                saveSuccess = pixmap.save(fileName, "JPEG", 95);
+            }
+            
+            // 显示保存结果提示
+            if (saveSuccess)
+            {
+                QMessageBox::information(this, 
+                                       getText("save_success_title", "保存成功"),
+                                       getText("save_success_message", "截图已成功保存到：\n") + fileName);
+            }
+            else
+            {
+                QMessageBox::warning(this,
+                                   getText("save_failed_title", "保存失败"),
+                                   getText("save_failed_message", "截图保存失败，请检查文件路径和权限。"));
             }
         } });
 }
 
 void ScreenshotWidget::copyToClipboard()
 {
-    processScreenshot([](QPixmap &pixmap)
+    processScreenshot([this](QPixmap &pixmap)
                       {
         // 复制到剪贴板
         QClipboard *clipboard = QGuiApplication::clipboard();
-        clipboard->setPixmap(pixmap); });
+        clipboard->setPixmap(pixmap);
+        
+        // 显示复制成功提示
+        QMessageBox::information(this,
+                               getText("copy_success_title", "复制成功"),
+                               getText("copy_success_message", "截图已成功复制到剪贴板。")); });
 }
 
 void ScreenshotWidget::drawArrow(QPainter &painter, const QPointF &start, const QPointF &end, const QColor &color, int width, double scale)
@@ -3583,108 +3605,130 @@ void ScreenshotWidget::showWatermarkDialog() // 嵌入水印
 void ScreenshotWidget::mouseIsAdjust(QPoint mousePos)
 {
 
-    if(m_isadjust){
-        //左上角
-        if(m_adjectDirection == TopLeftCorner){
-            //if(startPoint.x())
+    if (m_isadjust)
+    {
+        // 左上角
+        if (m_adjectDirection == TopLeftCorner)
+        {
+            // if(startPoint.x())
             startPoint = mousePos;
         }
-        //右上角
-        else if(m_adjectDirection == TopRightCorner){
+        // 右上角
+        else if (m_adjectDirection == TopRightCorner)
+        {
             startPoint.setY(mousePos.y());
             endPoint.setX(mousePos.x());
         }
         // 左下角
-        else if(m_adjectDirection == LeftBottom){
+        else if (m_adjectDirection == LeftBottom)
+        {
             startPoint.setX(mousePos.x());
             endPoint.setY(mousePos.y());
         }
         // 右下角
-        else if(m_adjectDirection == RightBottom){
+        else if (m_adjectDirection == RightBottom)
+        {
             endPoint = mousePos;
         }
         // 左边中心点
-        else if(m_adjectDirection == LeftCenterPoint){
+        else if (m_adjectDirection == LeftCenterPoint)
+        {
             startPoint.setX(mousePos.x());
         }
         // 上边中心点
-        else if(m_adjectDirection == TopCenterPoint){
+        else if (m_adjectDirection == TopCenterPoint)
+        {
             startPoint.setY(mousePos.y());
         }
         // 右边中心点
-        else if(m_adjectDirection == RightCenterPoint){
+        else if (m_adjectDirection == RightCenterPoint)
+        {
             endPoint.setX(mousePos.x());
         }
         // 下边中心点
-        else if(m_adjectDirection == BottomCenterPoint){
+        else if (m_adjectDirection == BottomCenterPoint)
+        {
             endPoint.setY(mousePos.y());
         }
-        //整体移动
-        else if(m_adjectDirection == MoveAll){
+        // 整体移动
+        else if (m_adjectDirection == MoveAll)
+        {
             startPoint.setX(mousePos.x() - m_relativeDistance.x());
             startPoint.setY(mousePos.y() - m_relativeDistance.y());
             endPoint.setX(startPoint.x() + m_relativeDistance.width());
             endPoint.setY(startPoint.y() + m_relativeDistance.height());
         }
-    }else{
-        //左上角
-        if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
-            mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
+    }
+    else
+    {
+        // 左上角
+        if (mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+            mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6))
+        {
             setCursor(Qt::SizeFDiagCursor);
             m_adjectDirection = TopLeftCorner;
         }
         // 右上角
-        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
-                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
+        else if (mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6))
+        {
             setCursor(Qt::SizeBDiagCursor);
             m_adjectDirection = TopRightCorner;
         }
         // 左下角
-        else if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
-                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
+        else if (mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6))
+        {
             m_adjectDirection = LeftBottom;
             setCursor(Qt::SizeBDiagCursor);
         }
         // 右下角
-        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
-                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
+        else if (mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6))
+        {
             m_adjectDirection = RightBottom;
             setCursor(Qt::SizeFDiagCursor);
         }
         // 左边中心点
-        else if(mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
-                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6)){
+        else if (mousePos.x() >= (startPoint.x() - 6) && mousePos.x() <= (startPoint.x() + 6) &&
+                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6))
+        {
             m_adjectDirection = LeftCenterPoint;
             setCursor(Qt::SizeHorCursor);
         }
         // 上边中心点
-        else if(mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
-                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6)){
+        else if (mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
+                 mousePos.y() >= (startPoint.y() - 6) && mousePos.y() <= (startPoint.y() + 6))
+        {
             m_adjectDirection = TopCenterPoint;
             setCursor(Qt::SizeVerCursor);
         }
         // 右边中心点
-        else if(mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
-                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6)){
+        else if (mousePos.x() >= (endPoint.x() - 6) && mousePos.x() <= (endPoint.x() + 6) &&
+                 mousePos.y() >= ((startPoint.y() + endPoint.y()) / 2 - 6) && mousePos.y() <= ((startPoint.y() + endPoint.y()) / 2 + 6))
+        {
             m_adjectDirection = RightCenterPoint;
             setCursor(Qt::SizeHorCursor);
         }
         // 下边中心点
-        else if(mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
-                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6)){
+        else if (mousePos.x() >= ((startPoint.x() + endPoint.x()) / 2 - 6) && mousePos.x() <= ((startPoint.x() + endPoint.x()) / 2 + 6) &&
+                 mousePos.y() >= (endPoint.y() - 6) && mousePos.y() <= (endPoint.y() + 6))
+        {
             m_adjectDirection = BottomCenterPoint;
             setCursor(Qt::SizeVerCursor);
         }
         // 四条边
-        else if(((mousePos.x() >= startPoint.x() - 6 && mousePos.x() <= startPoint.x() + 6) && (mousePos.y() >= startPoint.y() && mousePos.y() <= endPoint.y())) ||
+        else if (((mousePos.x() >= startPoint.x() - 6 && mousePos.x() <= startPoint.x() + 6) && (mousePos.y() >= startPoint.y() && mousePos.y() <= endPoint.y())) ||
                  ((mousePos.x() >= endPoint.x() - 6 && mousePos.x() <= endPoint.x() + 6) && (mousePos.y() >= startPoint.y() && mousePos.y() <= endPoint.y())) ||
-                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= startPoint.y() - 6 &&mousePos.y() <= startPoint.y() + 6)) ||
-                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= endPoint.y() - 6 &&mousePos.y() <= endPoint.y() + 6))){
+                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= startPoint.y() - 6 && mousePos.y() <= startPoint.y() + 6)) ||
+                 ((mousePos.x() >= startPoint.x() && mousePos.x() <= endPoint.x()) && (mousePos.y() >= endPoint.y() - 6 && mousePos.y() <= endPoint.y() + 6)))
+        {
             m_adjectDirection = MoveAll;
             setCursor(Qt::SizeAllCursor);
         }
-        //其余位置恢复正常
-        else{
+        // 其余位置恢复正常
+        else
+        {
             setCursor(Qt::CrossCursor);
         }
     }
