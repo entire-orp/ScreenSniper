@@ -2809,70 +2809,122 @@ void ScreenshotWidget::updatePenWidthLabel()
 
 void ScreenshotWidget::updatePenToolbarPosition()
 {
-    if (!penToolbar || !selected)
-        return;
+    if (!penToolbar || !btnPen) return;
 
     penToolbar->adjustSize();
-    int toolbarWidth = penToolbar->sizeHint().width();
-    int toolbarHeight = penToolbar->sizeHint().height();
+    QSize toolbarSize = penToolbar->size();
 
-    // 获取可用区域（避开Dock栏）
-    QScreen *screen = QGuiApplication::primaryScreen();
-    QRect availableGeometry = screen->availableGeometry();
-    QPoint globalPos = mapToGlobal(QPoint(0, 0));
+    // 长截图模式使用第一个算法
+    if (captureMode == ScrollMode) {
+        // 方法1：直接使用按钮下方位置（窗口坐标）
+        QPoint btnPos = btnPen->pos();
+        int x = btnPos.x();
+        int y = btnPos.y() + btnPen->height() + 5;
 
-    int maxY = availableGeometry.bottom() - globalPos.y();
-    int maxX = availableGeometry.right() - globalPos.x();
-    int minX = availableGeometry.left() - globalPos.x();
-    int minY = availableGeometry.top() - globalPos.y();
+        // 转换为全局坐标检查是否在屏幕内
+        QPoint globalPos = mapToGlobal(QPoint(x, y + toolbarSize.height()));
+        QScreen *screen = QGuiApplication::primaryScreen();
+        QRect availableGeometry = screen->availableGeometry();
 
-    // 尝试对齐到画笔按钮
-    int x, y;
-    if (btnPen && toolbar && toolbar->isVisible())
-    {
-        QPoint btnPos = btnPen->mapTo(this, QPoint(0, 0));
-        x = btnPos.x();
-        y = btnPos.y() + btnPen->height() + 5;
+        qDebug() << "画笔工具栏底部全局Y：" << globalPos.y();
+        qDebug() << "屏幕底部Y：" << availableGeometry.bottom();
 
-        // 如果下方空间不足，放上方
-        if (y + toolbarHeight > maxY)
-        {
-            y = btnPos.y() - toolbarHeight - 5;
+        // 如果会超出屏幕，放在按钮上方
+        if (globalPos.y() > availableGeometry.bottom()) {
+            y = btnPos.y() - toolbarSize.height() - 5;
+            qDebug() << "调整为上方位置：" << y;
         }
-    }
-    else if (toolbar)
-    {
-        // 默认放在主工具栏下方
-        x = toolbar->x();
-        y = toolbar->y() + toolbar->height() + 5;
 
-        if (y + toolbarHeight > maxY)
-        {
-            y = toolbar->y() - toolbarHeight - 5;
+        // 水平方向也检查
+        globalPos = mapToGlobal(QPoint(x + toolbarSize.width(), y));
+        if (globalPos.x() > availableGeometry.right()) {
+            x = availableGeometry.right() - mapToGlobal(QPoint(0, 0)).x() - toolbarSize.width() - 10;
+            qDebug() << "调整水平位置：" << x;
         }
-    }
-    else
-    {
-        // toolbar 为空，使用默认位置
-        x = minX + 10;
-        y = minY + 10;
-    }
 
-    // 水平方向边界检查
-    if (x + toolbarWidth > maxX)
-    {
-        x = maxX - toolbarWidth - 5;
+        // 确保不超出窗口边界
+        QRect windowRect = rect();
+        if (x < 0) x = 0;
+        if (x + toolbarSize.width() > windowRect.width()) {
+            x = windowRect.width() - toolbarSize.width();
+        }
+        if (y < 0) y = 0;
+        if (y + toolbarSize.height() > windowRect.height()) {
+            y = windowRect.height() - toolbarSize.height();
+        }
+
+        penToolbar->move(x, y);
+
+        qDebug() << "画笔工具栏最终位置：" << QPoint(x, y)
+                 << "（全局：" << mapToGlobal(QPoint(x, y)) << "）";
     }
-    if (x < minX + 5)
-        x = minX + 5;
+    // 区域截图和其他模式使用第二个算法
+    else {
+        if (!penToolbar || !selected)
+            return;
 
-    // 垂直方向再次检查（防止上方也放不下）
-    if (y < minY + 5)
-        y = minY + 5;
-    if (y + toolbarHeight > maxY)
-        y = maxY - toolbarHeight - 5;
+        penToolbar->adjustSize();
+        int toolbarWidth = penToolbar->sizeHint().width();
+        int toolbarHeight = penToolbar->sizeHint().height();
 
-    penToolbar->move(x, y);
+        // 获取可用区域（避开Dock栏）
+        QScreen *screen = QGuiApplication::primaryScreen();
+        QRect availableGeometry = screen->availableGeometry();
+        QPoint globalPos = mapToGlobal(QPoint(0, 0));
+
+        int maxY = availableGeometry.bottom() - globalPos.y();
+        int maxX = availableGeometry.right() - globalPos.x();
+        int minX = availableGeometry.left() - globalPos.x();
+        int minY = availableGeometry.top() - globalPos.y();
+
+        // 尝试对齐到画笔按钮
+        int x, y;
+        if (btnPen && toolbar && toolbar->isVisible())
+        {
+            QPoint btnPos = btnPen->mapTo(this, QPoint(0, 0));
+            x = btnPos.x();
+            y = btnPos.y() + btnPen->height() + 5;
+
+            // 如果下方空间不足，放上方
+            if (y + toolbarHeight > maxY)
+            {
+                y = btnPos.y() - toolbarHeight - 5;
+            }
+        }
+        else if (toolbar)
+        {
+            // 默认放在主工具栏下方
+            x = toolbar->x();
+            y = toolbar->y() + toolbar->height() + 5;
+
+            if (y + toolbarHeight > maxY)
+            {
+                y = toolbar->y() - toolbarHeight - 5;
+            }
+        }
+        else
+        {
+            // toolbar 为空，使用默认位置
+            x = minX + 10;
+            y = minY + 10;
+        }
+
+        // 水平方向边界检查
+        if (x + toolbarWidth > maxX)
+        {
+            x = maxX - toolbarWidth - 5;
+        }
+        if (x < minX + 5)
+            x = minX + 5;
+
+        // 垂直方向再次检查
+        if (y < minY + 5)
+            y = minY + 5;
+        if (y + toolbarHeight > maxY)
+            y = maxY - toolbarHeight - 5;
+
+        penToolbar->move(x, y);
+    }
 }
 
 void ScreenshotWidget::mouseDoubleClickEvent(QMouseEvent *event)
@@ -3801,7 +3853,7 @@ void ScreenshotWidget::updateShapesToolbarPosition()
     shapesToolbar->adjustSize();
     QSize toolbarSize = shapesToolbar->size();
 
-    // 长截图模式使用第一个算法
+    // 长截图模式
     if (captureMode == ScrollMode) {
         // 方法1：直接使用按钮下方位置（窗口坐标）
         QPoint btnPos = btnShapes->pos();
@@ -3845,7 +3897,7 @@ void ScreenshotWidget::updateShapesToolbarPosition()
         qDebug() << "最终位置：" << QPoint(x, y)
                  << "（全局：" << mapToGlobal(QPoint(x, y)) << "）";
     }
-    // 区域截图和其他模式使用第二个算法
+    // 区域截图
     else {
         if (!shapesToolbar || !selected)
             return;
