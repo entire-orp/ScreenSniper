@@ -3415,7 +3415,7 @@ BOOL CALLBACK ScreenshotWidget::EnumWindowsProc(HWND hwnd, LPARAM lParam)
 
     // 过滤幻影窗口
     DWORD CloakedVal = 0;
-    HRESULT hRes = ::DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &CloakedVal, sizeof(CloakedVal));
+    HRESULT hRes = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &CloakedVal, sizeof(CloakedVal));
 
     // 调用成功且窗口被隐藏
     if (SUCCEEDED(hRes) && (CloakedVal != 0))
@@ -3432,7 +3432,6 @@ BOOL CALLBACK ScreenshotWidget::EnumWindowsProc(HWND hwnd, LPARAM lParam)
         WCHAR exeName[256] = {0};
         GetModuleBaseNameW(hProcess, nullptr, exeName, _countof(exeName));
         CloseHandle(hProcess);
-        // 直接比较宽字符
         if (QString::fromWCharArray(exeName) == QCoreApplication::applicationName())
         {
             return TRUE;
