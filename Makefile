@@ -852,14 +852,6 @@ moc_aimanager.cpp: aimanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonObject \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonobject.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		moc_predefs.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc
 	/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc $(DEFINES) --include /Users/ceilf/Desktop/ScreenSniper/moc_predefs.h -I/opt/homebrew/Cellar/qt@5/5.15.18/mkspecs/macx-clang -I/Users/ceilf/Desktop/ScreenSniper -I/opt/homebrew/include -I/opt/homebrew/opt/opencv/include/opencv4 -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtGui.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Library/Developer/CommandLineTools/usr/lib/clang/17/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Library/Developer/CommandLineTools/usr/include -F/opt/homebrew/Cellar/qt@5/5.15.18/lib aimanager.h -o moc_aimanager.cpp
@@ -917,12 +909,6 @@ moc_mainwindow.cpp: mainwindow.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		moc_predefs.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc
 	/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc $(DEFINES) --include /Users/ceilf/Desktop/ScreenSniper/moc_predefs.h -I/opt/homebrew/Cellar/qt@5/5.15.18/mkspecs/macx-clang -I/Users/ceilf/Desktop/ScreenSniper -I/opt/homebrew/include -I/opt/homebrew/opt/opencv/include/opencv4 -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtGui.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Library/Developer/CommandLineTools/usr/lib/clang/17/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Library/Developer/CommandLineTools/usr/include -F/opt/homebrew/Cellar/qt@5/5.15.18/lib mainwindow.h -o moc_mainwindow.cpp
@@ -982,12 +968,6 @@ moc_screenshotwidget.cpp: screenshotwidget.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		moc_predefs.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc
 	/opt/homebrew/Cellar/qt@5/5.15.18/bin/moc $(DEFINES) --include /Users/ceilf/Desktop/ScreenSniper/moc_predefs.h -I/opt/homebrew/Cellar/qt@5/5.15.18/mkspecs/macx-clang -I/Users/ceilf/Desktop/ScreenSniper -I/opt/homebrew/include -I/opt/homebrew/opt/opencv/include/opencv4 -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtGui.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 -I/Library/Developer/CommandLineTools/usr/lib/clang/17/include -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -I/Library/Developer/CommandLineTools/usr/include -F/opt/homebrew/Cellar/qt@5/5.15.18/lib screenshotwidget.h -o moc_screenshotwidget.cpp
@@ -1074,14 +1054,6 @@ aimanager.o: aimanager.cpp aimanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonObject \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonobject.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		aiconfigmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QString \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qstring.h \
@@ -1096,7 +1068,17 @@ aimanager.o: aimanager.cpp aimanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QStringList \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qstringlist.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QTextStream \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qtextstream.h
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qtextstream.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonObject \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonobject.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QDebug \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qdebug.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o aimanager.o aimanager.cpp
 
 main.o: main.cpp mainwindow.h \
@@ -1152,12 +1134,6 @@ main.o: main.cpp mainwindow.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/QApplication \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/qapplication.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
@@ -1215,12 +1191,6 @@ mainwindow.o: mainwindow.cpp mainwindow.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		ui_mainwindow.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/QMessageBox \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/qmessagebox.h \
@@ -1244,6 +1214,8 @@ mainwindow.o: mainwindow.cpp mainwindow.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qsettings.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QFile \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qfile.h \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
+		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QDebug \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qdebug.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/QDialog \
@@ -1326,12 +1298,6 @@ screenshotwidget.o: screenshotwidget.cpp screenshotwidget.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkaccessmanager.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/QNetworkReply \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtNetwork.framework/Headers/qnetworkreply.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonDocument \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsondocument.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QJsonArray \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qjsonarray.h \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/QBuffer \
-		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Headers/qbuffer.h \
 		ocrresultdialog.h \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/QDialog \
 		/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Headers/qdialog.h \

@@ -3566,24 +3566,41 @@ void ScreenshotWidget::performOCR()
     // 获取当前截图（包含绘制的内容）
     QPixmap capture = this->grab(selectedRect);
 
-    // 调用 OCR
-    QString text = OcrManager::recognize(capture);
+    // 显示正在识别的提示
+    QMessageBox *loadingMsg = new QMessageBox(this);
+    loadingMsg->setWindowTitle(getText("ocr_recognizing_title", "正在识别"));
+    loadingMsg->setText(getText("ocr_recognizing_msg", "正在进行 OCR 识别，请稍候..."));
+    loadingMsg->setStandardButtons(QMessageBox::NoButton);
+    loadingMsg->setWindowFlags(loadingMsg->windowFlags() | Qt::WindowStaysOnTopHint);
+    loadingMsg->show();
 
-    if (!text.isEmpty() && !text.startsWith("Error"))
-    {
-        QClipboard *clipboard = QGuiApplication::clipboard();
-        clipboard->setText(text);
+    // 异步调用 OCR
+    OcrManager::recognizeAsync(capture, [this, backend, loadingMsg](const QString &text) {
+        // 确保所有UI操作在主线程中执行
+        QMetaObject::invokeMethod(this, [this, text, backend, loadingMsg]() {
+            // 关闭正在识别的提示
+            if (loadingMsg) {
+                loadingMsg->close();
+                loadingMsg->deleteLater();
+            }
 
-        // 使用自定义对话框显示 OCR 结果
-        OcrResultDialog *dialog = new OcrResultDialog(text, backend, this);
-        dialog->exec();
-        delete dialog;
-    }
-    else
-    {
-        QString errorMsg = text.isEmpty() ? getText("ocr_no_text", "未能识别到文字。") : text;
-        QMessageBox::warning(this, getText("ocr_failed_title", "OCR 失败"), errorMsg);
-    }
+            if (!text.isEmpty() && !text.startsWith("Error"))
+            {
+                QClipboard *clipboard = QGuiApplication::clipboard();
+                clipboard->setText(text);
+
+                // 使用自定义对话框显示 OCR 结果
+                OcrResultDialog *dialog = new OcrResultDialog(text, backend, this);
+                dialog->exec();
+                delete dialog;
+            }
+            else
+            {
+                QString errorMsg = text.isEmpty() ? getText("ocr_no_text", "未能识别到文字。") : text;
+                QMessageBox::warning(this, getText("ocr_failed_title", "OCR 失败"), errorMsg);
+            }
+        }, Qt::QueuedConnection);
+    });
 }
 
 // 图片生成文字描述
